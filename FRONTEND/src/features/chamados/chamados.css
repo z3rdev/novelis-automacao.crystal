@@ -1,0 +1,176 @@
+.chamados-page {
+  display: grid;
+  gap: 14px;
+  min-height: calc(100vh - 96px);
+  min-width: 0;
+  width: 100%;
+}
+
+.chamados-header,
+.chamados-toolbar,
+.chamados-summary {
+  align-items: center;
+  display: flex;
+}
+
+.chamados-header {
+  justify-content: space-between;
+}
+
+.chamados-title {
+  margin-bottom: 4px;
+}
+
+.chamados-header p,
+.chamados-source,
+.chamados-toolbar span {
+  color: #64748b;
+  font-size: 12px;
+  margin: 0;
+}
+
+.icon-text-button {
+  align-items: center;
+  background: #f8fbff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  color: #0f172a;
+  display: inline-flex;
+  gap: 8px;
+  height: 38px;
+  padding: 0 12px;
+}
+
+.icon-text-button:hover {
+  background: #e8f2ff;
+  border-color: #9ac3f5;
+}
+
+.chamados-summary {
+  gap: 10px;
+}
+
+.chamados-card {
+  background: #fbfdff;
+  border: 1px solid #d8e0ea;
+  border-radius: 7px;
+  display: grid;
+  gap: 5px;
+  min-width: 160px;
+  padding: 12px;
+}
+
+.chamados-card span {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.chamados-card strong {
+  color: #0f172a;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.chamados-card.ok strong {
+  color: #047857;
+}
+
+.chamados-card.warn strong {
+  color: #b45309;
+}
+
+.chamados-toolbar {
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.chamados-search {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  display: flex;
+  gap: 8px;
+  height: 38px;
+  max-width: 520px;
+  padding: 0 10px;
+  width: 100%;
+}
+
+.chamados-search input {
+  border: 0;
+  height: 34px;
+  outline: none;
+  width: 100%;
+}
+
+.chamados-table-wrap {
+  border: 1px solid #d8e0ea;
+  border-radius: 7px;
+  height: calc(100vh - 300px);
+  min-height: 460px;
+  overflow: auto;
+  width: 100%;
+}
+
+.chamados-table {
+  border-collapse: collapse;
+  font-size: 12px;
+  min-width: 1280px;
+  width: 100%;
+}
+
+.chamados-table th,
+.chamados-table td {
+  border-bottom: 1px solid #e5ebf2;
+  padding: 10px 12px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.chamados-table th {
+  background: #f1f5f3;
+  color: #0f172a;
+  font-weight: 800;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.chamados-table tbody tr:hover {
+  background: #f8fbff;
+}
+
+.chamados-table input {
+  height: 16px;
+  width: 16px;
+}
+
+.status-chip {
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  padding: 5px 8px;
+}
+
+.status-chip.ok {
+  background: #e6f7ee;
+  color: #047857;
+}
+
+.status-chip.warn {
+  background: #fff4dd;
+  color: #92400e;
+}
+
+.chamados-error {
+  background: #ffe9e9;
+  border: 1px solid #f3a0a0;
+  border-radius: 6px;
+  color: #991b1b;
+  padding: 10px 12px;
+}

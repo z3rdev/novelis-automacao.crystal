@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "runtime_version": "11.5.0.313",
+  "architecture": "x86",
+  "prog_id": "CrystalDesignRunTime.Application.11",
+  "modules": [
+    {
+      "filename": "CrystalReports11_5_RDC_Designtime.msm",
+      "sha256": "AC9105259D6B349320A4F1D5A6F78343A6832312C3ECFA9A3C87FA5B5130053F"
+    },
+    {
+      "filename": "CrystalReports11_5_RDC_License.msm",
+      "sha256": "5F0524AB901E6C7773CA27E057AAA3DA3C63CCB7E8524DEB16AFBAC579A35D89"
+    },
+    {
+      "filename": "CrystalReports11_5_RDC_Reportengine.msm",
+      "sha256": "0FB8CB94AD369FE15A24E52B249F9921677C3DEEAF64CFCEA0184A1F0A527154"
+    },
+    {
+      "filename": "CrystalReports11_5_RDC_Runtime.msm",
+      "sha256": "659C432DE71ECEBC5869875F021A058DADE9E86659807C59E2F567B11C3F3542"
+    }
+  ]
+}

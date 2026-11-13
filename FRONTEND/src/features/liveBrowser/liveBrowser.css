@@ -1,0 +1,52 @@
+.live-browser-page {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100vh;
+}
+
+.live-browser-toolbar {
+  align-items: center;
+  display: flex;
+  flex-shrink: 0;
+  gap: 10px;
+  min-height: 56px;
+  padding: 10px 16px;
+}
+
+.live-browser-pid {
+  color: #64748b;
+  font-size: 12px;
+  margin-left: auto;
+}
+
+.live-browser-body {
+  display: flex;
+  flex: 1;
+  gap: 10px;
+  min-height: 0;
+  padding: 0 16px 16px;
+}
+
+.live-browser-slot {
+  background: #0f172a;
+  border: 1px dashed #475569;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 58%;
+  min-height: 0;
+}
+
+.live-browser-slot .muted {
+  color: #94a3b8;
+  padding: 24px;
+  text-align: center;
+}
+
+.live-browser-controls {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+}

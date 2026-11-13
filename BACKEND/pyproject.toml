@@ -1,0 +1,41 @@
+[project]
+name = "automacao-novelis-backend"
+version = "0.1.0"
+description = "Backend local da Automacao Novelis"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115.0",
+  "uvicorn[standard]>=0.30.0",
+  "httpx>=0.27.0",
+  "pydantic-settings>=2.4.0",
+  "playwright==1.61.0",
+  "python-dotenv>=1.0.1",
+  "websockets>=13.0",
+  "openpyxl>=3.1.5",
+  "pyodbc>=5.3.0",
+  "opencv-python-headless>=4.10.0",
+  "numpy>=1.26.0",
+  "pytesseract>=0.3.13",
+  "psutil>=6.0.0",
+]
+
+[project.optional-dependencies]
+dacte = ["brazilfiscalreport[dacte]==1.4.0", "qrcode[pil]>=8.2,<9", "pypdf>=5,<7", "pypdfium2>=4.30,<6", "zxing-cpp>=3.0,<4"]
+dev = [
+  "pytest>=8.2.0",
+  "ruff>=0.6.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.setuptools.package-data]
+"app.services.crystal_reports" = ["*.ps1"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

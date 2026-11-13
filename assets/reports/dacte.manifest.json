@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "file": "dacte.rpt",
+  "source_filename": "dacte_3a_v5-AD_LOGO7_V1.rpt",
+  "source_sha256": "11509f8464f4fe4fac2c8146f14a4572b37e4f9717743532f3cdb159ec05e2ad",
+  "sha256": "f1f5afaf65232480daeeebbf8e78b650e21b1bbcf8c98b12b062301bb6751de6",
+  "packaged_at": "2026-11-11T13:53:35.752652+00:00",
+  "has_saved_data": false,
+  "stored_credentials": false,
+  "formulas_preserved": true,
+  "layout_preserved": true,
+  "formulas_compiled": true,
+  "required_fonts": [
+    "Arial",
+    "BcsQrcode",
+    "Courier New",
+    "IDAutomationSC128L DEMO",
+    "Times New Roman"
+  ],
+  "demo_fonts": [
+    "IDAutomationSC128L DEMO"
+  ],
+  "external_function_references": [
+    {
+      "report": "main",
+      "formula": "{@F_QRCODE}",
+      "functions": [
+        "BCSQRCodeEncodeCR",
+        "BCSQRCodeFormulaNoForCR"
+      ]
+    },
+    {
+      "report": "main",
+      "formula": "{@qrcode}",
+      "functions": [
+        "BCSQRCodeEncodeCR",
+        "BCSQRCodeFormulaNoForCR"
+      ]
+    }
+  ],
+  "parameters": [
+    {
+      "name": "{?P_CODCON_INI}",
+      "type": 7,
+      "prompt": "CTRC Inicial"
+    },
+    {
+      "name": "{?P_CODCON_FIN}",
+      "type": 7,
+      "prompt": "CTRC Final"
+    },
+    {
+      "name": "{?P_CODFIL}",
+      "type": 7,
+      "prompt": "Filial CTRC"
+    },
+    {
+      "name": "{?P_SERCON}",
+      "type": 12,
+      "prompt": "Série CTRC"
+    }
+  ],
+  "warnings": [
+    {
+      "field": "fcobbar21",
+      "issue": "contingency_barcode_font",
+      "message": "Formula codificada Code 128 usa fonte Arial"
+    }
+  ],
+  "fiscal_validation": {
+    "status": "pending",
+    "reason": "Exige documentos de referencia, incluindo contingencia."
+  }
+}

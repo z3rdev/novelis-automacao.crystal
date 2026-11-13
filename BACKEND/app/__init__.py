@@ -1,0 +1,1 @@
+"""Automação Novelis backend."""

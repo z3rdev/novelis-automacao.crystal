@@ -1,0 +1,435 @@
+{
+  "source": "rodopar-preview",
+  "updated_at": "2026-07-31T16:45:34.969553Z",
+  "tabs": [
+    {
+      "id": "Modal Imprimir",
+      "name": "Modal Imprimir",
+      "description": "",
+      "order": 11,
+      "updated_at": "2026-07-31T16:27:04.320815Z"
+    }
+  ],
+  "sub_tabs": [
+    {
+      "id": "sub_impostos",
+      "name": "Sub_Impostos",
+      "tab": "Comp. do Frete",
+      "description": "",
+      "order": 1,
+      "updated_at": "2026-07-31T16:14:19.057961Z"
+    }
+  ],
+  "points": [
+    {
+      "id": "cmp_d_f_aba",
+      "tab": "Comp. do Frete",
+      "sub_tab": "",
+      "kind": "tab",
+      "x": 238,
+      "y": 184,
+      "x2": null,
+      "y2": null,
+      "viewport": {
+        "width": 1024,
+        "height": 750,
+        "dpr": 1.0
+      },
+      "description": "Aba Composição de Frente",
+      "updated_at": "2026-07-31T16:09:34.214718Z"
+    },
+    {
+      "id": "cmp_d_f_Descarga",
+      "tab": "Comp. do Frete",
+      "sub_tab": "",
+      "kind": "tab",
+      "x": 463,
+      "y": 333,
+      "x2": null,
+      "y2": null,
+      "viewport": {
+        "width": 1024,
+        "height": 750,
+        "dpr": 1.0
+      },
+      "description": "Composição de Frente {Descarga}",
+      "updated_at": "2026-07-31T16:12:21.044255Z"
+    },
+    {
+      "id": "cmp_d_f_Frete_Peso",
+      "tab": "Comp. do Frete",
+      "sub_tab": "",
+      "kind": "tab",
+      "x": 290,
+      "y": 285,
+      "x2": null,
+      "y2": null,
+      "viewport": {
+        "width": 1024,
+        "height": 750,
+        "dpr": 1.0
+      },
+      "description": "Composição de Frente {Frete Peso}",
+      "updated_at": "2026-07-31T16:11:11.792371Z"
+    },
+    {
+      "id": "cmp_d_f_Frete_Valor",
+      "tab": "Comp. do Frete",
+      "sub_tab": "",
+      "kind": "tab",
+      "x": 291,
+      "y": 260,
+      "x2": null,
+      "y2": null,
+      "viewport": {
+        "width": 1024,
+        "height": 750,
+        "dpr": 1.0
+      },
+      "description": "Composição de Frente {Frete Valor}",
+      "updated_at": "2026-07-31T16:10:50.457477Z"
+    },
+    {
+      "id": "cmp_d_f_Obs_CTRC",
+      "tab": "Comp. do Frete",
+      "sub_tab": "",
+      "kind": "tab",
+      "x": 320,
+      "y": 568,
+      "x2": null,
+      "y2": null,
+      "viewport": {
+        "width": 1024,
+        "height": 750,
+        "dpr": 1.0
+      },
+      "description": "Composição de Frente {observacao Ctrc}",
+      "updated_at": "2026-07-31T16:13:25.522237Z"
+    },
+    {
+      "id": "cmp_d_f_Outros",
+      "tab": "Comp. do Frete",
+      "sub_tab": "",
+      "kind": "tab",
+      "x": 284,
+      "y": 430,
+      "x2": null,
+      "y2": null,
+      "viewport": {
+        "width": 1024,
+        "height": 750,
+        "dpr": 1.0
+      },
+      "description": "Composição de Frente {Outros}",
+      "updated_at": "2026-07-31T16:14:03.270000Z"
+    },
+    {
+      "id": "cmp_d_f_Pedagio",
+      "tab": "Comp. do Frete",
+      "sub_tab": "",
+      "kind": "tab",
+      "x": 463,
+      "y": 358,
+      "x2": null,
+      "y2": null,
+      "viewport": {
+        "width": 1024,
+        "height": 750,
+        "dpr": 1.0
+      },
+      "description": "Composição de Frente {Pedagio}",
+      "updated_at": "2026-07-31T16:12:49.662649Z"
+    },
+    {
+      "id": "Sub_Aba_Impostos",
+      "tab": "Comp. do Frete",
+      "sub_tab": "sub_impostos",
+      "kind": "tab",
+      "x": 182,
+      "y": 227,
+      "x2": null,
+      "y2": null,
+      "viewport": {
+        "width": 1024,
+        "height": 750,
+        "dpr": 1.0
+      },
+      "description": "Sub-Aba Impostos",
+      "updated_at": "2026-07-31T16:14:57.110793Z"
+    },
+    {
+      "id": "Aba_geral",
+      "tab": "Geral",
+      "sub_tab": "",
+      "kind": "tab",
+      "x": 39,
+      "y": 186,
+      "x2": null,
+      "y2": null,
+      "viewport": {
+        "width": 1024,
+        "height": 750,
+        "dpr": 1.0
+      },
+      "description": "Aba Geral",
+      "updated_at": "2026-07-31T16:08:32.343571Z"
+    },
+    {
+      "id": "btn_geral_baixar_xml",
+      "tab": "Geral",
+      "sub_tab": "",
+      "kind": "button",
+      "x": 970,
+      "y": 589,
+      "x2": null,
+      "y2": null,
+      "viewport": {
+        "width": 1024,
+        "height": 750,
+        "dpr": 1.0
+      },
+      "description": "Botão copiar XML aba Geral",
+      "updated_at": "2026-07-31T15:41:05.029687Z"
+    },
+    {
+      "id": "geral_destinatario",
+      "tab": "Geral",
+      "sub_tab": "",
+      "kind": "field",
+      "x": 192,
+      "y": 386,
+      "x2": null,
+      "y2": null,
+      "viewport": {
+        "width": 1024,
+        "height": 750,
+        "dpr": 1.0
+      },
+      "description": "Campo de destinatario da aba geral",
+      "updated_at": "2026-07-31T15:44:09.992643Z"
+    },
+    {
+      "id": "geral_filial",
+      "tab": "Geral",
+      "sub_tab": "",
+      "kind": "field",
+      "x": 164,
+      "y": 210,
+      "x2": null,
+      "y2": null,
+      "viewport": {
+        "width": 1024,
+        "height": 750,
+        "dpr": 1.0
+      },
+      "description": "Campo filial da Aba Geral",
+      "updated_at": "2026-07-31T15:44:20.006514Z"
+    },
+    {
+      "id": "geral_linha",
+      "tab": "Geral",
+      "sub_tab": "",
+      "kind": "field",
+      "x": 183,
+      "y": 564,
+      "x2": null,
+      "y2": null,
+      "viewport": {
+        "width": 1024,
+        "height": 750,
+        "dpr": 1.0
+      },
+      "description": "Campo de linha da aba geral",
+      "updated_at": "2026-07-31T15:44:05.916327Z"
+    },
+    {
+      "id": "geral_local_coleta",
+      "tab": "Geral",
+      "sub_tab": "",
+      "kind": "field",
+      "x": 180,
+      "y": 587,
+      "x2": null,
+      "y2": null,
+      "viewport": {
+        "width": 1024,
+        "height": 750,
+        "dpr": 1.0
+      },
+      "description": "Campo de local coleta da aba geral",
+      "updated_at": "2026-07-31T15:44:03.544963Z"
+    },
+    {
+      "id": "geral_local_entrega",
+      "tab": "Geral",
+      "sub_tab": "",
+      "kind": "field",
+      "x": 210,
+      "y": 610,
+      "x2": null,
+      "y2": null,
+      "viewport": {
+        "width": 1024,
+        "height": 750,
+        "dpr": 1.0
+      },
+      "description": "Campo de local entrega da aba geral",
+      "updated_at": "2026-07-31T15:43:57.944259Z"
+    },
+    {
+      "id": "geral_n_CTRC",
+      "tab": "Geral",
+      "sub_tab": "",
+      "kind": "field",
+      "x": 305,
+      "y": 238,
+      "x2": null,
+      "y2": null,
+      "viewport": {
+        "width": 1024,
+        "height": 750,
+        "dpr": 1.0
+      },
+      "description": "Campo numero do Doc CTRC da Aba Geral",
+      "updated_at": "2026-07-31T15:44:15.505390Z"
+    },
+    {
+      "id": "geral_remetente",
+      "tab": "Geral",
+      "sub_tab": "",
+      "kind": "field",
+      "x": 190,
+      "y": 360,
+      "x2": null,
+      "y2": null,
+      "viewport": {
+        "width": 1024,
+        "height": 750,
+        "dpr": 1.0
+      },
+      "description": "Campo de remetente da aba geral",
+      "updated_at": "2026-07-31T15:44:12.515869Z"
+    },
+    {
+      "id": "geral_serie",
+      "tab": "Geral",
+      "sub_tab": "",
+      "kind": "field",
+      "x": 166,
+      "y": 236,
+      "x2": null,
+      "y2": null,
+      "viewport": {
+        "width": 1024,
+        "height": 750,
+        "dpr": 1.0
+      },
+      "description": "Campo serie da Aba Geral",
+      "updated_at": "2026-07-31T15:44:17.967999Z"
+    },
+    {
+      "id": "Botao_exportar_pdf",
+      "tab": "Modal Imprimir",
+      "sub_tab": "",
+      "kind": "button",
+      "x": 21,
+      "y": 41,
+      "x2": null,
+      "y2": null,
+      "viewport": {
+        "width": 1024,
+        "height": 750,
+        "dpr": 1.0
+      },
+      "description": "Botão Exporta - Tela Impressão",
+      "updated_at": "2026-07-31T16:29:47.872154Z"
+    },
+    {
+      "id": "Botao_ok_confirmar_pdf",
+      "tab": "Modal Imprimir",
+      "sub_tab": "",
+      "kind": "button",
+      "x": 115,
+      "y": 206,
+      "x2": null,
+      "y2": null,
+      "viewport": {
+        "width": 1024,
+        "height": 750,
+        "dpr": 1.0
+      },
+      "description": "Botão Ok - Modal Exporta pdf",
+      "updated_at": "2026-07-31T16:31:33.177751Z"
+    },
+    {
+      "id": "Botao_ok_pdf",
+      "tab": "Modal Imprimir",
+      "sub_tab": "",
+      "kind": "button",
+      "x": 664,
+      "y": 321,
+      "x2": null,
+      "y2": null,
+      "viewport": {
+        "width": 1024,
+        "height": 750,
+        "dpr": 1.0
+      },
+      "description": "Botão Ok - Modal Exporta",
+      "updated_at": "2026-07-31T16:30:31.316070Z"
+    },
+    {
+      "id": "imp_button",
+      "tab": "Modal Imprimir",
+      "sub_tab": "",
+      "kind": "button",
+      "x": 727,
+      "y": 440,
+      "x2": null,
+      "y2": null,
+      "viewport": {
+        "width": 1024,
+        "height": 750,
+        "dpr": 1.0
+      },
+      "description": "Botão Imprimir - Modal Impressão",
+      "updated_at": "2026-07-31T16:28:39.581077Z"
+    },
+    {
+      "id": "P_F_Window_Select",
+      "tab": "Modal Imprimir",
+      "sub_tab": "",
+      "kind": "region",
+      "x": 157,
+      "y": 349,
+      "x2": null,
+      "y2": null,
+      "viewport": {
+        "width": 1024,
+        "height": 750,
+        "dpr": 1.0
+      },
+      "description": "Ponto Final do arraste",
+      "updated_at": "2026-07-31T16:39:07.437465Z"
+    },
+    {
+      "id": "P_I_Window_Select",
+      "tab": "Modal Imprimir",
+      "sub_tab": "",
+      "kind": "region",
+      "x": 155,
+      "y": 141,
+      "x2": null,
+      "y2": null,
+      "viewport": {
+        "width": 1024,
+        "height": 750,
+        "dpr": 1.0
+      },
+      "description": "Ponto Inicial do arraste",
+      "updated_at": "2026-07-31T16:39:21.544004Z"
+    }
+  ],
+  "function_groups": [],
+  "functions": []
+}

@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "runtime_version": "11.5.0.313",
+  "approved_by": "",
+  "approved_at": "",
+  "deployment_scope": "",
+  "provenance": {"approved": false, "evidence_file": "", "sha256": ""},
+  "license": {"approved": false, "evidence_file": "", "sha256": ""},
+  "package_sha256": ""
+}

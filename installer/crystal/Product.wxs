@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="Novelis Crystal RDC x86 (11.5.0.313)" Manufacturer="Novelis"
+           Version="$(env.NOVELIS_CRYSTAL_PACKAGE_VERSION)" ProductCode="$(env.NOVELIS_CRYSTAL_PRODUCT_CODE)"
+           UpgradeCode="ED22CF99-8620-4C90-B465-941460894F26"
+           Language="1033" Scope="perMachine" InstallerVersion="500">
+    <MajorUpgrade DowngradeErrorMessage="A newer Novelis Crystal RDC prerequisite is installed." />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="medium" />
+    <!-- Merged SelfReg/File/Registry tables do not imply all host standard actions. -->
+    <InstallExecuteSequence>
+      <UnpublishComponents Sequence="1700" />
+      <SelfUnregModules Sequence="2200" />
+      <RemoveRegistryValues Sequence="2600" />
+      <RemoveFiles Sequence="3500" />
+      <RemoveFolders Sequence="3600" />
+      <CreateFolders Sequence="3700" />
+      <SelfRegModules Sequence="5600" />
+      <PublishComponents Sequence="6200" />
+    </InstallExecuteSequence>
+    <Property Id="ARPNOREMOVE" Value="1" />
+    <Property Id="NOVELIS_CRYSTAL_VERSION" Value="11.5.0.313" />
+    <Property Id="NOVELIS_CRYSTAL_BUILD_MODE" Value="$(env.NOVELIS_CRYSTAL_BUILD_MODE)" />
+    <Property Id="PIDKEY" Hidden="yes" Secure="yes" />
+    <Property Id="PIDKEY.9B216729_8664_4D57_A8C6_047165B18BD4" Hidden="yes" />
+    <?if $(env.NOVELIS_CRYSTAL_BUILD_MODE) = development ?>
+    <Launch Condition="Installed OR NOVELIS_DEVELOPMENT_TEST = &quot;1&quot;"
+            Message="Controlled development package. Use the authorized test installation script. Redistribution is not approved." />
+    <?endif?>
+    <StandardDirectory Id="TARGETDIR">
+      <Merge Id="CrystalRuntime" SourceFile="$(env.NOVELIS_CRYSTAL_MODULES)/CrystalReports11_5_RDC_Runtime.msm" Language="0" DiskId="1" />
+      <Merge Id="CrystalEngine" SourceFile="$(env.NOVELIS_CRYSTAL_MODULES)/CrystalReports11_5_RDC_Reportengine.msm" Language="0" DiskId="1">
+        <ConfigurationData Name="InstallCRDB_ADO" Value="1" />
+        <ConfigurationData Name="InstallU2FPDF" Value="1" />
+      </Merge>
+      <Merge Id="CrystalLicense" SourceFile="$(env.NOVELIS_CRYSTAL_MODULES)/CrystalReports11_5_RDC_License.msm" Language="0" DiskId="1">
+        <ConfigurationData Name="PIDKEY" Value="$(env.NOVELIS_CRYSTAL_PIDKEY)" />
+      </Merge>
+      <Merge Id="CrystalDesign" SourceFile="$(env.NOVELIS_CRYSTAL_MODULES)/CrystalReports11_5_RDC_Designtime.msm" Language="0" DiskId="1" />
+    </StandardDirectory>
+    <Feature Id="CrystalRDC" Title="Crystal XI R2 RDC and RCAPI x86" Level="1" AllowAbsent="no">
+      <MergeRef Id="CrystalRuntime" /><MergeRef Id="CrystalEngine" />
+      <MergeRef Id="CrystalLicense" /><MergeRef Id="CrystalDesign" />
+    </Feature>
+  </Package>
+</Wix>

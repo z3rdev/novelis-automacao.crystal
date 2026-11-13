@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "components": [
+    {
+      "id": "barcodesoft", "name": "Barcodesoft QRCode Encoder DEMO",
+      "filename": "qrcodedemo.exe", "variant": "demo", "engine": "inno-6.1.0",
+      "sha256": "061dad9ebed740b4db1737160afcf1ae3eca74a8b4df4c73bd2aa74a10281c0b",
+      "required_architecture": "x86", "official_url": "https://www.barcodesoft.com/",
+      "redistribution_approved": false, "license_evidence": null
+    },
+    {
+      "id": "code128", "name": "IDAutomation Code 128 Font Advantage DEMO",
+      "filename": "IDAutomation_C128FontAdvantageDEMO.exe", "variant": "demo", "engine": "inno-6.0.0",
+      "sha256": "e804e6c069556ca6a025b7aea1df9ca07bbb21a1469ad300d1804396c0eed813",
+      "official_url": "https://www.idautomation.com/barcode-fonts/code-128/download/",
+      "license_url": "https://www.idautomation.com/license-matrix-for-barcode-fonts/",
+      "redistribution_approved": false, "license_evidence": null
+    },
+    {
+      "id": "crystal", "name": "Crystal Reports XI R2 Runtime x86",
+      "filename": "NovelisCrystalRDC-x86-1.0.1.msi", "sha256": null,
+      "engine": "msi-prerequisite", "variant": "licensed", "runtime_version": "11.5.0.313",
+      "required_architecture": "x86", "official_url": "https://help.sap.com/docs/SAP_CRYSTAL_REPORTS",
+      "redistribution_approved": false, "license_evidence": null
+    }
+  ]
+}

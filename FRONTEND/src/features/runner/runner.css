@@ -1,0 +1,177 @@
+.run-cte-select-row {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+}
+
+.run-cte-select-row select {
+  flex: 1;
+  min-width: 0;
+}
+
+.run-manual-panel {
+  border-top: 1px solid #e2e8f0;
+  display: grid;
+  gap: 8px;
+  padding-top: 10px;
+}
+
+.run-manual-panel .run-option {
+  margin-top: 0;
+}
+
+.manual-chamado-option {
+  background: #fff7ed;
+  border: 1px solid #fdba74;
+  border-radius: 6px;
+  color: #9a3412;
+  font-weight: 700;
+  padding: 8px;
+}
+
+.run-manual-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.run-manual-grid textarea {
+  background: #fbfdff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  color: #111827;
+  line-height: 1.35;
+  min-height: 92px;
+  min-width: 0;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+.manual-file-input {
+  display: none;
+}
+
+.manual-file-picker {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.manual-file-button {
+  flex: 0 0 auto;
+}
+
+.manual-file-name {
+  color: #475569;
+  flex: 1;
+  font-size: 12px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.run-days-modal-backdrop {
+  align-items: center;
+  background: #0f172acc;
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  position: fixed;
+  z-index: 40;
+}
+
+.run-days-modal {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 20px 45px #0006;
+  display: grid;
+  gap: 10px;
+  max-width: 340px;
+  padding: 20px;
+  width: 90%;
+}
+
+.run-days-modal p {
+  color: #64748b;
+  font-size: 13px;
+  margin: 0;
+}
+
+.run-days-modal-options {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 4px;
+}
+
+.run-days-option {
+  background: #f8fbff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  color: #0f172a;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 10px 4px;
+}
+
+.run-days-option.selected {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+}
+
+.run-days-modal-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+
+.run-progress {
+  display: grid;
+  gap: 4px;
+  margin: 4px 0 12px;
+}
+
+.run-progress-label {
+  color: #0f172a;
+  display: flex;
+  font-size: 12px;
+  font-weight: 700;
+  justify-content: space-between;
+}
+
+.run-progress-bar {
+  appearance: none;
+  border: none;
+  border-radius: 999px;
+  height: 8px;
+  width: 100%;
+}
+
+.run-progress-bar::-webkit-progress-bar {
+  background: #e2e8f0;
+  border-radius: 999px;
+}
+
+.run-progress-bar::-webkit-progress-value {
+  background: #2563eb;
+  border-radius: 999px;
+  transition: width 0.2s ease;
+}
+
+.run-progress-bar::-moz-progress-bar {
+  background: #2563eb;
+  border-radius: 999px;
+}
+
+.run-progress-detail {
+  color: #64748b;
+  font-size: 11px;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

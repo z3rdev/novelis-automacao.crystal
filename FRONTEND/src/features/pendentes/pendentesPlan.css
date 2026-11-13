@@ -1,0 +1,236 @@
+.pendentes-plan-page {
+  display: grid;
+  gap: 14px;
+  min-height: calc(100vh - 96px);
+  min-width: 0;
+  width: 100%;
+}
+
+.pendentes-plan-header,
+.pendentes-plan-toolbar,
+.pendentes-plan-summary {
+  align-items: center;
+  display: flex;
+}
+
+.pendentes-plan-header {
+  justify-content: space-between;
+}
+
+.pendentes-plan-header-actions {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.pendentes-plan-header-actions a.icon-text-button {
+  text-decoration: none;
+}
+
+.pendentes-plan-title {
+  margin-bottom: 4px;
+}
+
+.pendentes-plan-header p,
+.pendentes-plan-source,
+.pendentes-plan-toolbar span {
+  color: #64748b;
+  font-size: 12px;
+  margin: 0;
+}
+
+.pendentes-plan-summary {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.pendentes-plan-card {
+  background: #fbfdff;
+  border: 1px solid #d8e0ea;
+  border-radius: 7px;
+  display: grid;
+  gap: 5px;
+  min-width: 150px;
+  padding: 12px;
+}
+
+.pendentes-plan-card span {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.pendentes-plan-card strong {
+  color: #0f172a;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.pendentes-plan-card.ok strong {
+  color: #047857;
+}
+
+.pendentes-plan-card.warn strong {
+  color: #b45309;
+}
+
+.pendentes-plan-toolbar {
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.pendentes-plan-search {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  display: flex;
+  gap: 8px;
+  height: 38px;
+  max-width: 520px;
+  padding: 0 10px;
+  width: 100%;
+}
+
+.pendentes-plan-search input {
+  border: 0;
+  height: 34px;
+  outline: none;
+  width: 100%;
+}
+
+.pendentes-plan-table-wrap {
+  border: 1px solid #d8e0ea;
+  border-radius: 7px;
+  height: calc(100vh - 340px);
+  min-height: 400px;
+  overflow: auto;
+  width: 100%;
+}
+
+.pendentes-plan-table {
+  border-collapse: collapse;
+  font-size: 12px;
+  min-width: 720px;
+  width: 100%;
+}
+
+.pendentes-plan-table th,
+.pendentes-plan-table td {
+  border-bottom: 1px solid #e5ebf2;
+  padding: 10px 12px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.pendentes-plan-table th {
+  background: #f1f5f3;
+  color: #0f172a;
+  font-weight: 800;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.pendentes-plan-table tbody tr:hover {
+  background: #f8fbff;
+}
+
+.pendentes-status-chip {
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  padding: 5px 8px;
+}
+
+.pendentes-status-chip.ok {
+  background: #e6f7ee;
+  color: #047857;
+}
+
+.pendentes-status-chip.warn {
+  background: #fff4dd;
+  color: #92400e;
+}
+
+.pendentes-status-chip.neutral {
+  background: #eef1f4;
+  color: #5f6f85;
+}
+
+.pendentes-plan-error {
+  background: #ffe9e9;
+  border: 1px solid #f3a0a0;
+  border-radius: 6px;
+  color: #991b1b;
+  padding: 10px 12px;
+}
+
+.pendentes-plan-empty {
+  background: #f4fbf6;
+  border: 1px solid #cfe2d3;
+  border-radius: 6px;
+  color: #1f5137;
+  padding: 10px 12px;
+}
+
+.pendentes-export-modal-backdrop {
+  align-items: center;
+  background: #0f172acc;
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  position: fixed;
+  z-index: 40;
+}
+
+.pendentes-export-modal {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 20px 45px #0006;
+  display: grid;
+  gap: 10px;
+  max-width: 360px;
+  padding: 20px;
+  width: 90%;
+}
+
+.pendentes-export-modal p {
+  color: #64748b;
+  font-size: 13px;
+  margin: 0;
+}
+
+.pendentes-export-modal-actions {
+  display: grid;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.pendentes-export-modal-actions .icon-text-button {
+  justify-content: center;
+  width: 100%;
+}
+
+.pendentes-export-modal-actions .icon-text-button.primary {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+}
+
+.pendentes-export-modal-actions .icon-text-button.primary:hover {
+  background: #1d4ed8;
+}
+
+.pendentes-export-modal-cancel {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 12px;
+  justify-self: center;
+  padding: 4px;
+}
