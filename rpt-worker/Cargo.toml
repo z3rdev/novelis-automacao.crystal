@@ -1,0 +1,17 @@
+[package]
+name = "novelis-rpt-worker"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.99"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rpt-reader = { git = "https://github.com/MrSrsen/rpt-rs.git", rev = "3f5beb51dd34d36c4a4326280d25f473b44889d1", features = ["serde"] }
+rpt-model = { git = "https://github.com/MrSrsen/rpt-rs.git", rev = "3f5beb51dd34d36c4a4326280d25f473b44889d1", features = ["serde"] }
+rpt-data = { git = "https://github.com/MrSrsen/rpt-rs.git", rev = "3f5beb51dd34d36c4a4326280d25f473b44889d1" }
+rpt-formula = { git = "https://github.com/MrSrsen/rpt-rs.git", rev = "3f5beb51dd34d36c4a4326280d25f473b44889d1" }
+rpt-query = { git = "https://github.com/MrSrsen/rpt-rs.git", rev = "3f5beb51dd34d36c4a4326280d25f473b44889d1" }
+rpt-render = { git = "https://github.com/MrSrsen/rpt-rs.git", rev = "3f5beb51dd34d36c4a4326280d25f473b44889d1" }
+rpt-render-pdf = { git = "https://github.com/MrSrsen/rpt-rs.git", rev = "3f5beb51dd34d36c4a4326280d25f473b44889d1" }
+rpt-format-value = { git = "https://github.com/MrSrsen/rpt-rs.git", rev = "3f5beb51dd34d36c4a4326280d25f473b44889d1" }
