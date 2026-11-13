@@ -228,7 +228,8 @@ try {
 } finally {
   Pop-Location
 }
-Invoke-Checked powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Root 'scripts\build-hub-desktop.ps1') -NoBundle -Version $Version
+Invoke-Checked -FilePath powershell.exe -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass',
+  '-File', (Join-Path $Root 'scripts\build-hub-desktop.ps1'), '-NoBundle', '-Version', $Version)
 
 $Iscc = Get-InnoCompiler
 $innoArgs = @("/DMyAppVersion=$Version")

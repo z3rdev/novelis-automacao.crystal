@@ -11,7 +11,7 @@ pub fn start_installed_backend(app: tauri::AppHandle) {
         let python = root.join("BACKEND/.venv/Scripts/python.exe");
         let script = root.join("scripts/setup/launch_backend.py");
         let mut command = Command::new(python);
-        command.arg("-I").arg(script).current_dir(&root);
+        command.arg("-I").arg(script).arg("--interactive-network").current_dir(&root);
         #[cfg(windows)]
         {
             use std::os::windows::process::CommandExt;

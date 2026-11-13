@@ -8,7 +8,7 @@ from app.automation.flows.flow_events import emit_step, emit_warn
 from app.services.crystal_reports.models import DacteRequest
 from app.services.crystal_reports.service import CrystalReportError, CrystalReportService
 from app.services.crystal_reports.validation import read_pdf_symbols
-from app.services.cte_pdf_files import find_pdf_evidence
+from app.services.cte_pdf_files import find_pdf_evidence, pdf_target
 
 
 class CrystalPdfRunner:
@@ -42,7 +42,7 @@ class CrystalPdfRunner:
                     filial=int(row["filial"]), serie=str(row["serie"]), documento=int(row["documento"])
                 )
                 target = self._target(pdf_config, document)
-                existing = await run_blocking(find_pdf_evidence, target.parent, row)
+                existing = await run_blocking(find_pdf_evidence, target.parent.parent, row)
                 if existing:
                     await emit_step(self.emit, run_id, "crystal_pdf.reused", f"PDF ja disponivel para {cte}; geracao dispensada.",
                                     {"cte": cte, "pdfFile": str(existing), "source": "existing"})
@@ -77,8 +77,7 @@ class CrystalPdfRunner:
         base = Path(config.get("downloadTargetDir") or "captures/rodopar-pdfs-downloads")
         if not base.is_absolute():
             base = self.settings.backend_root.parent / base
-        cte = f"{document.filial}-{document.serie}-{document.documento}"
-        return base / f"CTE_{cte}.pdf"
+        return pdf_target(base, document.model_dump())
 
 
 def check_automation_pdf(path: Path, document: DacteRequest) -> None:

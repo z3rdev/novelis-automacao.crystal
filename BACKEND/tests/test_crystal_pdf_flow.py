@@ -75,7 +75,7 @@ def test_main_flow_generates_crystal_pdf_without_accessing_browser(scenario):
     result = asyncio.run(flow.run(NoBrowser(), RunStartRequest(
         flow="pendentes", dry_run=False, sample_cte="1-10-23167",
     ), "test-crystal"))
-    target = source.parent / "pdfs/CTE_1-10-23167.pdf"
+    target = source.parent / "pdfs/cte-23167/CTE_1-10-23167.pdf"
     assert target.read_bytes() == source.read_bytes()
     assert result["faltandoPdf"] == []
     flow._run_rodopar_pdf.assert_not_awaited()

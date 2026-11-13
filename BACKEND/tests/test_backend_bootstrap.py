@@ -104,6 +104,26 @@ Test-PythonCommand $Candidate | ConvertTo-Json -Compress
     assert json.loads(result.stdout.strip()) is expected
 
 
+def test_installer_build_preserves_native_file_flag_in_structured_arguments(tmp_path):
+    fixture = tmp_path / "tauri build fixture.ps1"
+    fixture.write_text('param([switch]$NoBundle,[string]$Version,[int]$Jobs=1)\n'
+                       '@{version=$Version;jobs=$Jobs;no_bundle=[bool]$NoBundle} | ConvertTo-Json -Compress\n')
+    harness = tmp_path / "build wrapper.ps1"
+    harness.write_text(r'''param($Source,$Fixture)
+$tokens=$null; $errors=$null
+$ast=[Management.Automation.Language.Parser]::ParseFile($Source,[ref]$tokens,[ref]$errors)
+$fn=$ast.Find({param($n) $n -is [Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq 'Invoke-Checked'},$true)
+. ([scriptblock]::Create($fn.Extent.Text))
+Invoke-Checked -FilePath powershell.exe -Arguments @('-NoProfile','-ExecutionPolicy','Bypass',
+  '-File',$Fixture,'-NoBundle','-Version','0.1.34')
+''')
+    result = run_ps(harness, str(ROOT / "scripts/build-installer.ps1"), str(fixture))
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert json.loads(result.stdout) == {"version": "0.1.34", "jobs": 1, "no_bundle": True}
+    source = (ROOT / "scripts/build-installer.ps1").read_text(encoding="utf-8-sig")
+    assert "Invoke-Checked -FilePath powershell.exe -Arguments" in source
+
+
 def test_collect_only_preserves_scripts_and_excludes_private_configuration(tmp_path):
     root = tmp_path / "installed application"
     (root / "BACKEND").mkdir(parents=True)

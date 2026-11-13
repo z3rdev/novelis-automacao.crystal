@@ -7,10 +7,19 @@ from pathlib import Path
 from urllib.error import URLError
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from verify_backend import ReadinessError, health, hub_ready, start_backend, stop_backend, valid_health, wait_ready
+from network_access import ensure_database_access
+from verify_backend import (
+    ReadinessError,
+    health,
+    hub_ready,
+    start_backend,
+    stop_backend,
+    valid_health,
+    wait_ready,
+)
 
 
-def launch(root: Path, port: int = 8000):
+def launch(root: Path, port: int = 8000, *, interactive_network: bool = False):
     if not (root / ".automacao-novelis-install").is_file():
         raise ReadinessError("installation_marker_missing")
     prepared = json.loads((root / "runtime/bootstrap-result.json").read_text(encoding="utf-8-sig"))
@@ -36,6 +45,7 @@ def launch(root: Path, port: int = 8000):
             if not valid_health(existing, root) or not hub_ready(port):
                 raise ReadinessError("port_occupied_by_different_or_unavailable_backend")
             return
+        ensure_database_access(root, interactive=interactive_network)
         with (root / "runtime/backend-local.log").open("a", encoding="utf-8") as log:
             process = start_backend(root, port, log)
         try:
@@ -51,8 +61,8 @@ def launch(root: Path, port: int = 8000):
 if __name__ == "__main__":
     root = Path(__file__).resolve().parents[2]
     try:
-        launch(root)
-    except Exception as exc:
+        launch(root, interactive_network="--interactive-network" in sys.argv)
+    except Exception as exc:  # noqa: BLE001 -- Persist categories without logging exception text or credentials.
         (root / "runtime/backend-launch-error.json").write_text(
             json.dumps({"status": "failed", "error_type": type(exc).__name__,
                         "reason": getattr(exc, "reason", "launch_error"),

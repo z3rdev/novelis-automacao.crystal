@@ -55,9 +55,12 @@ def main():
     result["configuration_sources"] = {name: digest(ROOT / name) for name in [
         "installer/AutomacaoNovelis.iss", "installer/backend/Configuration.iss",
         "installer/backend/Hub.iss", "installer/backend/OperationalConfiguration.iss",
+        "installer/backend/Preparation.iss", "scripts/bootstrap.ps1", "scripts/build-installer.ps1",
         "scripts/setup/environment_payload.py", "scripts/setup/protect-operational-env.ps1",
         "scripts/setup/verify_backend.py",
         "scripts/setup/launch_backend.py",
+        "scripts/setup/network_access.py", "scripts/setup/windows_network.py",
+        "FRONTEND-HUB/src-tauri/src/backend.rs",
     ]}
     result["backend_query_sources"] = {name: digest(ROOT / name) for name in [
         "BACKEND/app/data/consulta_db.py",
@@ -73,6 +76,8 @@ def main():
         "BACKEND/app/services/crystal_reports/service.py",
         "BACKEND/app/services/crystal_reports/qr_code.py",
         "BACKEND/app/services/crystal_reports/diagnostics.py",
+        "BACKEND/app/services/cte_pdf_files.py",
+        "BACKEND/app/automation/flows/pendentes/controles/crystal_pdf.py",
         "BACKEND/app/tools/dacte_components.py",
         "BACKEND/app/tools/dacte_setup.py",
         "BACKEND/pyproject.toml",

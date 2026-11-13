@@ -8,11 +8,14 @@ begin
   BackendPrepared := False;
   BackendPreparationFailed := True;
   DeleteFile(ExpandConstant('{app}\runtime\bootstrap-result.json.exitcode'));
+  DeleteFile(ExpandConstant('{app}\runtime\backend-preparation-message.txt'));
 end;
 
 procedure VerifyBackendPreparation;
 var
   ExitText: AnsiString;
+  Detail: AnsiString;
+  Message: String;
 begin
   BackendPrepared :=
     LoadStringFromFile(ExpandConstant('{app}\runtime\bootstrap-result.json.exitcode'), ExitText);
@@ -23,8 +26,11 @@ begin
   if BackendPreparationFailed then
   begin
     Log('Backend preparation failed. Application launch and service configuration skipped.');
+    Message := 'A preparacao do backend falhou.';
+    if LoadStringFromFile(ExpandConstant('{app}\runtime\backend-preparation-message.txt'), Detail) then
+      Message := Message + #13#10 + Trim(String(Detail));
     if not WizardSilent then
-      SuppressibleMsgBox('A preparacao do backend falhou. A aplicacao nao sera iniciada.' + #13#10 +
+      SuppressibleMsgBox(Message + #13#10 +
         'Consulte ' + ExpandConstant('{app}\runtime\bootstrap.log') + #13#10 +
         'e bootstrap-result.json na mesma pasta.', mbError, MB_OK, IDOK);
   end;

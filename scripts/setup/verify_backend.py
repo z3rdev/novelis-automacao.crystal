@@ -5,10 +5,14 @@ import os
 import re
 import socket
 import subprocess
+import sys
 import time
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import ProxyHandler, build_opener
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from network_access import ensure_database_access
 
 
 class ReadinessError(RuntimeError):
@@ -24,7 +28,7 @@ def local_json(port: int, endpoint: str, timeout: int) -> dict:
     with opener.open(f"http://127.0.0.1:{port}{endpoint}", timeout=timeout) as response:
         result = json.load(response)
     if not isinstance(result, dict):
-        raise ValueError("invalid_local_response")
+        raise ValueError("invalid_local_response")  # noqa: TRY004 -- Callers classify malformed API responses as ValueError.
     return result
 
 
@@ -62,7 +66,7 @@ def stop_backend(process):
     if os.name == "nt":
         # The Windows venv redirector can have a separate interpreter child.
         subprocess.run(["taskkill.exe", "/PID", str(process.pid), "/T", "/F"],
-            capture_output=True, timeout=20, creationflags=subprocess.CREATE_NO_WINDOW)
+            capture_output=True, timeout=20, check=False, creationflags=subprocess.CREATE_NO_WINDOW)
     else:
         process.terminate()
     try:
@@ -111,12 +115,15 @@ def wait_ready(root: Path, port: int, process, timeout: int = 90) -> dict:
     raise ReadinessError("backend_health_timeout", checks)
 
 
-def verify(root: Path) -> dict:
+def verify(root: Path, *, interactive_network: bool = False) -> dict:
     runtime = root / "runtime"
     runtime.mkdir(exist_ok=True)
     result = {"schema_version": 2, "status": "failed", "hub_api": False, "production_ready": False}
     process = None
+    message = runtime / "backend-preparation-message.txt"
+    message.unlink(missing_ok=True)
     try:
+        result["network"] = ensure_database_access(root, interactive=interactive_network)
         with socket.socket() as sock:
             sock.bind(("127.0.0.1", 0))
             port = sock.getsockname()[1]
@@ -126,10 +133,15 @@ def verify(root: Path) -> dict:
             data = wait_ready(root, port, process)
         result.update(status="succeeded", hub_api=True, version=data["version"],
                       identity=os.environ.get("USERNAME", ""), port=port)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 -- Persist a safe failure category at the installer boundary.
         result["error_type"] = type(exc).__name__
         result["reason"] = getattr(exc, "reason", "verification_error")
         result["checks"] = getattr(exc, "checks", {})
+        from network_access import MESSAGES
+
+        message.write_text(MESSAGES.get(result["reason"],
+            "A API local falhou na verificacao. Consulte backend-readiness.json e backend-setup.log."),
+            encoding="utf-8")
         raise RuntimeError("Verificacao do backend falhou: " + result["reason"] +
                            ". Consulte runtime/backend-readiness.json e backend-setup.log") from None
     finally:
@@ -142,4 +154,6 @@ def verify(root: Path) -> dict:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", type=Path, required=True)
-    print(json.dumps(verify(parser.parse_args().root.resolve())))
+    parser.add_argument("--interactive-network", action="store_true")
+    args = parser.parse_args()
+    print(json.dumps(verify(args.root.resolve(), interactive_network=args.interactive_network)))

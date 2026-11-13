@@ -119,7 +119,7 @@ Type: files; Name: "{app}\installer-cache\python-3.12.10-amd64.exe"
 [Run]
 Filename: "powershell.exe"; Parameters: "-NoProfile -NonInteractive -ExecutionPolicy Bypass -File ""{app}\scripts\setup\prepare-webview.ps1"""; WorkingDir: "{app}"; StatusMsg: "Verificando Microsoft WebView2..."; Flags: runhidden waituntilterminated; BeforeInstall: ResetWebViewPreparation; AfterInstall: VerifyWebViewPreparation
 Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -Command ""$p = '{app}\installer-cache\vc_redist.x64.exe'; if (Test-Path -LiteralPath $p) {{ & $p /install /quiet /norestart }}; exit 0"""; WorkingDir: "{app}"; StatusMsg: "Instalando runtime Visual C++..."; Flags: runhidden waituntilterminated
-Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\bootstrap.ps1"" -SkipFrontend"; WorkingDir: "{app}"; StatusMsg: "Preparando Python local e validando a API do Cargo Hub..."; Flags: runhidden waituntilterminated; BeforeInstall: PrepareBackendInstallation; AfterInstall: VerifyBackendPreparation
+Filename: "powershell.exe"; Parameters: "{code:BootstrapArguments}"; WorkingDir: "{app}"; StatusMsg: "Preparando Python local e validando a API do Cargo Hub..."; Flags: runhidden waituntilterminated; BeforeInstall: PrepareBackendInstallation; AfterInstall: VerifyBackendPreparation
 Filename: "powershell.exe"; Parameters: "{code:DacteArguments}"; WorkingDir: "{app}"; StatusMsg: "Preparando e verificando DACTE e componentes x86..."; Flags: runhidden waituntilterminated; Check: BackendIsPrepared
 Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\install-desktop-service.ps1"" -SkipExecutableBuild -SkipShortcut"; WorkingDir: "{app}"; StatusMsg: "Configurando inicializacao do backend nesta conta..."; Flags: runhidden waituntilterminated; Check: HubIsPrepared
 Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"; Description: "Abrir Novelis Cargo Hub"; Flags: nowait postinstall skipifsilent; Check: HubIsPrepared
@@ -143,6 +143,14 @@ var
 #include "backend\Preparation.iss"
 #include "backend\Hub.iss"
 #include "backend\OperationalConfiguration.iss"
+
+function BootstrapArguments(Param: String): String;
+begin
+  Result := '-NoProfile -ExecutionPolicy Bypass -File "' +
+    ExpandConstant('{app}\scripts\bootstrap.ps1') + '" -SkipFrontend';
+  if not WizardSilent then
+    Result := Result + ' -InteractiveNetwork';
+end;
 
 function DacteArguments(Param: String): String;
 begin

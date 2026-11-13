@@ -1,6 +1,7 @@
 param(
   [switch]$SkipFrontend,
-  [switch]$SkipBackend
+  [switch]$SkipBackend,
+  [switch]$InteractiveNetwork
 )
 
 $ErrorActionPreference = "Stop"
@@ -457,7 +458,9 @@ if (-not $SkipBackend) {
   }
   if ($InstalledApplication) {
     Set-BootstrapStage 'backend_health'
-    Invoke-Checked $VenvPythonExe @('-I', (Join-Path $PSScriptRoot 'setup\verify_backend.py'), '--root', $Root) $BackendDir
+    $VerifyArguments = @('-I', (Join-Path $PSScriptRoot 'setup\verify_backend.py'), '--root', $Root)
+    if ($InteractiveNetwork) { $VerifyArguments += '--interactive-network' }
+    Invoke-Checked $VenvPythonExe $VerifyArguments $BackendDir
   }
 }
 
