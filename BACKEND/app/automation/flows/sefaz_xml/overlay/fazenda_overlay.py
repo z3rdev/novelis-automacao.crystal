@@ -2,8 +2,10 @@ import asyncio
 import time
 from contextlib import suppress
 from typing import Any
+from urllib.parse import urlsplit
 
-from playwright.async_api import Locator, Page, TimeoutError as PlaywrightTimeoutError
+from playwright.async_api import Locator, Page
+from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 
 
 class FazendaValidationError(RuntimeError):
@@ -166,15 +168,18 @@ async def wait_for_captcha_marked(
     timeout_ms: int = 180_000,
     poll_ms: int = 250,
 ) -> str:
-    deadline = time.monotonic() + (timeout_ms / 1000)
+    started_at = time.monotonic()
+    deadline = started_at + (timeout_ms / 1000)
+    automatic_click_deadline = min(deadline, started_at + 5)
+    automatic_click_pending = True
     await update_fazenda_overlay(
         page,
         {
             **state,
             "phase": "hCaptcha",
             "message": (
-                "Clique no checkbox do hCaptcha. Quando marcar, a automação "
-                "continua sozinha. Se precisar, use Continuar mesmo assim."
+                "Tentando clicar no checkbox do hCaptcha. Se aparecer um desafio, "
+                "conclua no navegador para continuar automaticamente."
             ),
             "primaryLabel": "Continuar mesmo assim",
             "showPrimary": True,
@@ -199,6 +204,18 @@ async def wait_for_captcha_marked(
                 },
             )
             return "checked"
+        if automatic_click_pending:
+            clicked = False
+            with suppress(Exception):
+                clicked = await click_captcha_checkbox(page)
+            automatic_click_pending = not clicked and time.monotonic() < automatic_click_deadline
+            if not automatic_click_pending:
+                message = (
+                    "Clique enviado ao hCaptcha. Se aparecer um desafio, conclua no navegador."
+                    if clicked else
+                    "Tentativa de clique encerrada. Conclua o hCaptcha no navegador para continuar."
+                )
+                await update_fazenda_overlay(page, {**state, "phase": "hCaptcha", "message": message})
         await asyncio.sleep(poll_ms / 1000)
     raise RuntimeError("Captcha da Sefaz não foi resolvido dentro do tempo.")
 
@@ -316,48 +333,35 @@ async def is_captcha_marked(page: Page) -> bool:
 
 
 async def click_captcha_checkbox(page: Page) -> bool:
-    selectors = (
-        ".check",
-        "#checkbox",
-        '[role="checkbox"]',
-        "div.check",
-        'div[aria-hidden="true"] .check',
-        ".checkbox",
-    )
-    for selector in selectors:
+    for frame in page.frames:
         try:
-            locator = page.locator(selector).first
-            if await locator.count() and await is_locator_visible(locator):
-                await locator.click(force=True, timeout=1_000)
-                await page.wait_for_timeout(500)
-                return True
+            url = urlsplit(frame.url)
+            host = (url.hostname or "").lower()
+            hcaptcha = (
+                host == "hcaptcha.com" or host.endswith(".hcaptcha.com")
+            ) and "frame=challenge" not in url.fragment
+            recaptcha = (
+                host in {"google.com", "recaptcha.net"}
+                or host.endswith((".google.com", ".recaptcha.net"))
+            ) and url.path.endswith("/anchor") and "/recaptcha/" in url.path
+            if not (hcaptcha or recaptcha):
+                continue
+            locator = frame.locator("#checkbox, #recaptcha-anchor").first
+            if not await locator.count() or not await is_locator_visible(locator):
+                continue
+            if await locator.get_attribute("aria-checked", timeout=300) == "true":
+                return False
+            await locator.click(timeout=1_000)
+            return True
         except Exception:
             continue
-
-    for frame in page.frames:
-        for selector in selectors:
-            try:
-                locator = frame.locator(selector).first
-                if not await locator.count() or not await is_locator_visible(locator):
-                    continue
-                await locator.scroll_into_view_if_needed(timeout=1_000)
-                box = await locator.bounding_box(timeout=1_000)
-                if box:
-                    await page.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
-                    await page.mouse.down()
-                    await page.wait_for_timeout(40)
-                    await page.mouse.up()
-                else:
-                    await locator.click(force=True, timeout=1_000)
-                await page.wait_for_timeout(800)
-                return True
-            except Exception:
-                continue
     return False
 
 
 async def _locator_has_value(locator: Locator) -> bool:
     try:
+        if not await locator.count():
+            return False
         value = await locator.input_value(timeout=300)
         return bool(str(value or "").strip())
     except PlaywrightTimeoutError:

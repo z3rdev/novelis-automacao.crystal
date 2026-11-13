@@ -69,6 +69,10 @@ def main():
         "scripts/diagnose-consulta-sql.py",
         "BACKEND/app/automation/flows/pendentes/controles/execution_scope.py",
     ]}
+    result["sefaz_xml_sources"] = {name: digest(ROOT / name) for name in [
+        "BACKEND/app/automation/flows/sefaz_xml/steps/xml_sefaz.py",
+        "BACKEND/app/automation/flows/sefaz_xml/overlay/fazenda_overlay.py",
+    ]}
     result["dacte_sources"] = {name: digest(ROOT / name) for name in [
         "BACKEND/app/services/crystal_reports/code128.py",
         "BACKEND/app/services/crystal_reports/code128-picture.ps1",

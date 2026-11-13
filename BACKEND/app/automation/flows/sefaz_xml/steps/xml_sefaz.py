@@ -122,7 +122,7 @@ class XmlSefazFlow:
             self.emit,
             run_id,
             "xml_sefaz.captcha",
-            "Chave preenchida. Resolva o hCaptcha; depois a automação continua sozinha.",
+            "Chave preenchida. Tentando clicar no hCaptcha; conclua eventuais desafios no navegador.",
         )
         await wait_for_captcha_marked(
             page,
