@@ -13,7 +13,7 @@ def test_daily_query_reopens_connection_once_after_killed_session(monkeypatch, f
     assert result.rows == []
     assert result.source_file == "SQL_ULTIMOS_1_DIAS"
     assert state.connections == state.closed == 2
-    assert state.parameters == [(-1, None, None), (-1, None, None)]
+    assert state.parameters == [(0, None, None), (0, None, None)]
 
 
 def test_daily_query_preserves_error_after_bounded_retry(monkeypatch):
@@ -28,6 +28,13 @@ def test_daily_query_does_not_retry_database_access_error(monkeypatch):
     with pytest.raises(Exception, match="4060"):
         fetch_last_5_days_rows({"server": "sql", "user": "usr", "pass": "pwd"})
     assert state.connections == state.closed == 1
+
+
+@pytest.mark.parametrize("days,offset", [(0, 0), (5, -4), (10, -9), (20, -19), (30, -29)])
+def test_periods_include_today_and_preserve_zero_for_current_day(monkeypatch, days, offset):
+    state = _daily_connections(monkeypatch, failures=0)
+    fetch_last_5_days_rows({"server": "sql", "user": "usr", "pass": "pwd"}, days)
+    assert state.parameters == [(offset, None, None)]
 
 
 def _daily_connections(monkeypatch, failures, fail_stage="execute", error="Session in kill state (596)"):

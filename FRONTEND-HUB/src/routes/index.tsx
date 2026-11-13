@@ -7,6 +7,8 @@ import { useRun, RunSummary, StagesView } from "@/components/app/run-panel";
 import { useApi } from "@/services";
 import { fmtDateTime } from "@/lib/format";
 import { toast } from "sonner";
+import { useState } from "react";
+import { PeriodSelect } from "@/components/app/period-select";
 
 export const Route = createFileRoute("/")({
   head: () => ({ meta: [
@@ -21,9 +23,10 @@ export const Route = createFileRoute("/")({
 function Overview() {
   const { api, mode, baseUrl } = useApi();
   const qc = useQueryClient();
+  const [period, setPeriod] = useState(30);
   const ov = useQuery({ queryKey: ["overview", mode, baseUrl], queryFn: () => api.getOverview(), refetchInterval: 5000, retry: 0 });
   const run = useRun();
-  const refresh = useMutation({ mutationFn: () => api.refreshCtes(30), onSuccess: (r) => { toast.success(r.state === "executando" ? "Consulta iniciada. Acompanhe o progresso em Execução." : `Consulta concluída: ${r.atualizados} CT-e(s)`); qc.invalidateQueries(); }, onError: (e: Error) => toast.error(e.message) });
+  const refresh = useMutation({ mutationFn: () => api.refreshCtes(period), onSuccess: (r) => { toast.success(r.state === "executando" ? "Consulta iniciada. Acompanhe o progresso em Execução." : `Consulta concluída: ${r.atualizados} CT-e(s)`); qc.invalidateQueries(); }, onError: (e: Error) => toast.error(e.message) });
   const d = ov.data;
   const v = (n?: number) => (d ? n : "…");
   return (
@@ -32,7 +35,8 @@ function Overview() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-muted-foreground">Última atualização dos dados: <strong className="text-foreground">{fmtDateTime(d?.ultimaAtualizacao)}</strong></p>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => refresh.mutate()} disabled={refresh.isPending}><RefreshCw className={refresh.isPending ? "animate-spin" : ""} />Consultar agora (30 dias)</Button>
+          <PeriodSelect value={period} onChange={setPeriod} disabled={refresh.isPending} />
+          <Button variant="outline" size="sm" onClick={() => refresh.mutate()} disabled={refresh.isPending}><RefreshCw className={refresh.isPending ? "animate-spin" : ""} />Consultar agora</Button>
           <Button size="sm" asChild><Link to="/execucao"><Play />Ir para execução</Link></Button>
         </div>
       </div>

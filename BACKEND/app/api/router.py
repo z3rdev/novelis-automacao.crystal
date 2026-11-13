@@ -14,6 +14,7 @@ from app.api.routers import (
     pendentes,
     reports,
     runs,
+    sessions,
     steps,
 )
 
@@ -21,6 +22,7 @@ from app.api.routers import (
 api_router = APIRouter(prefix="/api")
 api_router.include_router(health.router)
 api_router.include_router(hub.router)
+api_router.include_router(sessions.router)
 api_router.include_router(config.router)
 api_router.include_router(chamados.router)
 api_router.include_router(steps.router)

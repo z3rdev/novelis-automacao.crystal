@@ -27,14 +27,14 @@ def validate_download(path: Path, row: dict) -> None:
             raise ValueError("Serie/numero dentro do XML nao corresponde ao CT-e consultado.")
 
 
-def matching_xml_files(directory: Path, row: dict) -> list[Path]:
+def matching_xml_files(directory: Path, row: dict, *, entries: list[Path] | None = None) -> list[Path]:
     if not directory.is_dir():
         return []
     doc = str(int(row["documento"]))
     expected = str(row.get("cteId") or row.get("CTE_ID") or "").removeprefix("CTe")
     cte = "-".join(str(int(row[k])) for k in ("filial", "serie", "documento"))
     candidates = [directory / f"CTE_{cte}.xml"]
-    for path in directory.iterdir():
+    for path in directory.iterdir() if entries is None else entries:
         check_cancelled()
         if path.suffix.lower() == ".xml" and (doc in path.stem or expected and expected in path.stem):
             candidates.append(path)

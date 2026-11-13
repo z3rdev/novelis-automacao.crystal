@@ -16,6 +16,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { AppSidebar } from "@/components/app/app-sidebar";
 import { AppHeader } from "@/components/app/app-header";
 import { ApiProvider } from "@/services";
+import { SessionGate } from "@/components/app/session-gate";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
@@ -134,7 +135,7 @@ function RootComponent() {
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <ApiProvider>
         <TooltipProvider delayDuration={200}>
-          <SidebarProvider>
+          <SessionGate><SidebarProvider>
             <div className="flex min-h-screen w-full">
               <AppSidebar />
               <div className="flex min-w-0 flex-1 flex-col">
@@ -144,7 +145,7 @@ function RootComponent() {
                 </main>
               </div>
             </div>
-          </SidebarProvider>
+          </SidebarProvider></SessionGate>
           <Toaster richColors position="bottom-right" />
         </TooltipProvider>
       </ApiProvider>

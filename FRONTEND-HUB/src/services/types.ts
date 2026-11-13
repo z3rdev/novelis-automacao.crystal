@@ -50,6 +50,13 @@ export interface RunStatus {
 
 export interface StartRunRequest { flow: FlowId; ctes?: string[]; periodoDias?: number }
 
+export interface DeviceIdentity { windows_user: string; computer_name: string; mac_addresses: string[] }
+export interface OperatorSession extends DeviceIdentity {
+  id: string; operator_name: string; login_at: string; last_seen_at: string; status: string;
+  automation_status: string; run_id: string | null;
+}
+export interface SessionState { identity: DeviceIdentity; session: OperatorSession | null; pending_sync: number; sync_error?: boolean }
+
 export interface LogEntry { id: string; time: string; severity: Severity; source: string; message: string; details?: string | undefined }
 
 export interface DacteJob { id?: string; pdfUrl?: string; cte: string; metodo: "crystal" | "xml"; state: StageState; etapa: string; erro?: string | undefined; arquivo?: string | undefined; qrCode?: "ok" | "falha" | "pendente"; codigoBarras?: "ok" | "falha" | "pendente"; geradoEm?: string }
@@ -70,6 +77,9 @@ export interface AutomationStep { id: string; ordem: number; nome: string; acao:
 export interface BrowserFrame { url: string; titulo: string; acao: string; screenshot?: string; ativo: boolean }
 
 export interface AutomationApi {
+  getSession(): Promise<SessionState>;
+  login(operatorName: string): Promise<SessionState>;
+  logout(): Promise<void>;
   ping(): Promise<{ ok: boolean; versao: string; latenciaMs: number }>;
   getOverview(): Promise<Overview>;
   listCtes(): Promise<Cte[]>;

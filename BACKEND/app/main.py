@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from contextlib import suppress
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,6 +18,7 @@ from app.services.crystal_reports.service import CrystalReportService
 from app.services.dacte_xml import XmlDacteService
 from app.services.hub_service import HubService
 from app.services.mapping_repository import MappingRepository
+from app.services.session_audit import SessionAudit
 from app.services.step_repository import StepRepository
 
 logger = logging.getLogger(__name__)
@@ -54,8 +56,10 @@ def create_app() -> FastAPI:
     step_repository = StepRepository(settings.steps_file)
     mapping_repository = MappingRepository(settings.mapping_file)
     store = OperationsStore(settings.novelis_sqlite_path) if settings.novelis_sqlite_path else None
+    audit = SessionAudit(settings.storage_dir / "login-audit.sqlite",
+        settings.login_audit_db_path or store.path.parent / "logs/sessoes.sqlite") if store else None
     event_bus = EventBus(store=store)
-    run_state = RunState(store=store)
+    run_state = RunState(store=store, audit=audit)
 
     app.state.settings = settings
     app.state.env_catalog = EnvCatalog(settings)
@@ -67,6 +71,7 @@ def create_app() -> FastAPI:
     app.state.event_bus = event_bus
     app.state.run_state = run_state
     app.state.operations_store = store
+    app.state.session_audit = audit
     preview_browser = BrowserDriver(settings)
     app.state.preview_browser = preview_browser
     app.state.automation = AutomationService(
@@ -77,7 +82,7 @@ def create_app() -> FastAPI:
         run_state,
         preview_browser,
     )
-    app.state.hub = HubService(settings, app.state.legacy_config, store, app.state.automation, event_bus) if store else None
+    app.state.hub = HubService(settings, app.state.legacy_config, store, app.state.automation, event_bus, audit) if store else None
 
     app.include_router(api_router)
 
@@ -87,10 +92,19 @@ def create_app() -> FastAPI:
         if store:
             await asyncio.to_thread(store.initialize)
             app.state.legacy_config.values.update(await asyncio.to_thread(store.preferences))
+            await asyncio.to_thread(audit.recover)
             await run_state.restore()
+            snapshot = (await run_state.get()).model_dump(mode="json")
+            if snapshot["status"] != "idle":
+                await asyncio.to_thread(audit.record_run, snapshot, None)
+            app.state.audit_sync_task = asyncio.create_task(audit.sync_loop())
 
     @app.on_event("shutdown")
     async def shutdown_resources() -> None:
+        if task := getattr(app.state, "audit_sync_task", None):
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
         proxy_client = getattr(app.state, "preview_proxy_client", None)
         if proxy_client is not None:
             await proxy_client.aclose()

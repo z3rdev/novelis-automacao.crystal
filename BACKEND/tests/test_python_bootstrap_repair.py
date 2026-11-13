@@ -6,6 +6,8 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from queue import Queue
+from threading import Thread
 
 import pytest
 
@@ -163,7 +165,10 @@ finally { $lock.Dispose() }
                                     str(ROOT / "scripts/setup/bootstrap-state.ps1"), str(tmp_path)],
                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         try:
-            time.sleep(1.5)
+            waiting = Queue()
+            Thread(target=lambda: waiting.put(process.stdout.readline()), daemon=True).start()
+            announcement = waiting.get(timeout=15)
+            assert b"Aguardando" in announcement
             assert not (tmp_path / "acquired.txt").exists()
             assert process.poll() is None
         except BaseException:
@@ -173,4 +178,3 @@ finally { $lock.Dispose() }
     stdout, stderr = process.communicate(timeout=20)
     assert process.returncode == 0, stderr.decode(errors="replace")
     assert (tmp_path / "acquired.txt").exists()
-    assert "Aguardando" in stdout.decode(errors="replace")

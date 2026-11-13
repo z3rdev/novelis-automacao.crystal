@@ -25,7 +25,7 @@ HubDep = Annotated[HubService, Depends(get_hub)]
 class StartRequest(BaseModel):
     flow: Literal["completo", "documentos", "somente_pdf", "somente_xml", "somente_chamados", "consulta"] = "completo"
     ctes: list[str] = Field(default_factory=list, max_length=500)
-    periodoDias: int = Field(default=5, ge=1, le=90)
+    periodoDias: int = Field(default=5, ge=0, le=90)
 
 
 @router.get("/health/ping")
@@ -35,18 +35,24 @@ def ping(hub: HubDep):
 
 @router.get("/overview")
 async def overview(hub: HubDep):
-    return await hub.overview()
+    try:
+        return await hub.overview()
+    except OSError:
+        raise HTTPException(503, "Verificacao dos arquivos indisponivel. Verifique acesso as pastas configuradas.") from None
 
 
 @router.get("/ctes")
 def ctes(hub: HubDep):
-    return hub.ctes()
+    try:
+        return hub.ctes()
+    except OSError:
+        raise HTTPException(503, "Verificacao dos arquivos indisponivel. Verifique acesso as pastas configuradas.") from None
 
 
 @router.post("/ctes/refresh")
-async def refresh(body: StartRequest, hub: HubDep):
+async def refresh(body: StartRequest, request: Request, hub: HubDep):
     try:
-        await hub.start("consulta", [], body.periodoDias)
+        await hub.start("consulta", [], body.periodoDias, request.headers.get("X-Operator-Session"))
     except RuntimeError as exc:
         raise HTTPException(409, str(exc)) from exc
     except ValueError as exc:
@@ -60,9 +66,9 @@ async def current(hub: HubDep):
 
 
 @router.post("/runs")
-async def start(body: StartRequest, hub: HubDep):
+async def start(body: StartRequest, request: Request, hub: HubDep):
     try:
-        return await hub.start(body.flow, body.ctes, body.periodoDias)
+        return await hub.start(body.flow, body.ctes, body.periodoDias, request.headers.get("X-Operator-Session"))
     except RuntimeError as exc:
         raise HTTPException(409, str(exc)) from exc
     except ValueError as exc:
@@ -86,11 +92,11 @@ class GenerateRequest(BaseModel):
 
 
 @router.post("/documents/dacte/generate", status_code=202)
-async def generate(body: GenerateRequest, hub: HubDep):
+async def generate(body: GenerateRequest, request: Request, hub: HubDep):
     if body.metodo != "crystal":
         raise HTTPException(422, "Lote XML ainda nao integrado nesta tela; a rota individual XML permanece disponivel.")
     try:
-        await hub.start("somente_pdf", body.ctes, 5)
+        await hub.start("somente_pdf", body.ctes, 5, request.headers.get("X-Operator-Session"))
     except RuntimeError as exc:
         raise HTTPException(409, str(exc)) from exc
     except ValueError as exc:

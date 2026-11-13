@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import * as XLSX from "xlsx";
-import { Search, Download, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Search, Download, CheckCircle2, AlertTriangle, RefreshCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -13,6 +13,8 @@ import { PageBody, TableBox } from "@/components/app/page";
 import { DocPill, Pill } from "@/components/app/status";
 import { useApi, type Cte } from "@/services";
 import { fmtBRL, fmtDate, fmtDateTime } from "@/lib/format";
+import { PeriodSelect } from "@/components/app/period-select";
+import { toast } from "sonner";
 import { desktop } from "@/services/desktop";
 
 export const Route = createFileRoute("/pendentes")({
@@ -31,10 +33,14 @@ const missing = (c: Cte) => c.pdf === "faltando" || c.xml === "faltando" || c.co
 
 function Pendentes() {
   const { api, mode, baseUrl } = useApi();
-  const q = useQuery({ queryKey: ["ctes", mode, baseUrl], queryFn: () => api.listCtes(), refetchInterval: 6000, retry: 0 });
+  const q = useQuery({ queryKey: ["ctes", mode, baseUrl], queryFn: () => api.listCtes(), refetchInterval: 2000, refetchOnWindowFocus: "always", retry: 0 });
   const [busca, setBusca] = useState("");
   const [filtro, setFiltro] = useState<Filtro>("todos");
-  const [sel, setSel] = useState<Cte | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const sel = q.data?.find((item) => item.id === selectedId) ?? null;
+  const [period, setPeriod] = useState(5);
+  const qc = useQueryClient();
+  const refresh = useMutation({ mutationFn: () => api.refreshCtes(period), onSuccess: () => { toast.success("Consulta iniciada"); qc.invalidateQueries(); }, onError: (error: Error) => toast.error(error.message) });
   const rows = useMemo(() => (q.data ?? []).filter((c) => {
     const b = busca.trim().toLowerCase();
     if (b && !(c.id.includes(b) || c.chave.includes(b) || c.destinatario.toLowerCase().includes(b) || c.destino.toLowerCase().includes(b))) return false;
@@ -56,6 +62,12 @@ function Pendentes() {
   return (
     <PageBody>
       <div className="flex flex-wrap items-center gap-2">
+        <PeriodSelect value={period} onChange={setPeriod} disabled={refresh.isPending} />
+        <Button variant="outline" size="sm" onClick={() => refresh.mutate()} disabled={refresh.isPending}><RefreshCw />Consultar CT-es</Button>
+        <span className="text-xs text-muted-foreground">Arquivos verificados {q.dataUpdatedAt ? new Date(q.dataUpdatedAt).toLocaleTimeString("pt-BR") : "—"}</span>
+      </div>
+      {q.isError && <p role="alert" className="text-sm text-destructive">Verificação de arquivos indisponível. {(q.error as Error).message}</p>}
+      <div className="flex flex-wrap items-center gap-2">
         <div className="relative w-full max-w-sm"><Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="pl-8" placeholder="Buscar CT-e, chave, destinatário…" value={busca} onChange={(e) => setBusca(e.target.value)} /></div>
         <ToggleGroup type="single" variant="outline" size="sm" value={filtro} onValueChange={(v) => v && setFiltro(v as Filtro)} className="flex-wrap">
           <ToggleGroupItem value="todos">Todos ({count(() => true)})</ToggleGroupItem>
@@ -75,7 +87,7 @@ function Pendentes() {
           <TableHeader><TableRow><TableHead>CT-e</TableHead><TableHead>Emissão</TableHead><TableHead>Destinatário</TableHead><TableHead className="text-right">Valor</TableHead><TableHead>PDF</TableHead><TableHead>XML</TableHead><TableHead>Guia/Comprovante</TableHead><TableHead>Chamado</TableHead></TableRow></TableHeader>
           <TableBody>
             {rows.map((c) => (
-              <TableRow key={c.id} className="cursor-pointer" onClick={() => setSel(c)} data-state={sel?.id === c.id ? "selected" : undefined}>
+              <TableRow key={c.id} className="cursor-pointer" onClick={() => setSelectedId(c.id)} data-state={sel?.id === c.id ? "selected" : undefined}>
                 <TableCell className="font-mono font-medium">{c.id}</TableCell>
                 <TableCell>{fmtDate(c.emissao)}</TableCell>
                 <TableCell className="max-w-[220px] truncate">{c.destinatario}</TableCell>
@@ -88,7 +100,7 @@ function Pendentes() {
           </TableBody>
         </Table>
       </TableBox>
-      <Sheet open={!!sel} onOpenChange={(o) => !o && setSel(null)}>
+      <Sheet open={!!sel} onOpenChange={(o) => !o && setSelectedId(null)}>
         <SheetContent className="w-full overflow-y-auto sm:max-w-md">
           {sel && (<>
             <SheetHeader><SheetTitle className="font-mono">CT-e {sel.id}</SheetTitle><SheetDescription>Filial {sel.filial} · Série {sel.serie} · Número {sel.numero}</SheetDescription></SheetHeader>

@@ -201,12 +201,13 @@ class PendentesFlow:
             )
             return None
 
-        days = max(1, int(days_back or 5))
+        days = max(0, int(days_back if days_back is not None else 5))
+        period = "do dia atual" if days == 0 else f"dos ultimos {days} dias, incluindo hoje"
         await emit_step(
             self.emit,
             run_id,
             "pendentes.sql_refresh",
-            f"Consultando SQL dos últimos {days} dia(s) para montar pendentes.",
+            f"Consultando SQL {period} para montar pendentes.",
         )
         try:
             result = await run_blocking(fetch_last_5_days_rows, db_config, days)
@@ -237,7 +238,7 @@ class PendentesFlow:
             self.emit,
             run_id,
             "pendentes.sql_loaded",
-            f"SQL últimos {days} dias carregado: {len(result.rows)} CTE(s).",
+            f"SQL {period} carregado: {len(result.rows)} CTE(s).",
             {"sourceJson": str(output_file), "total": len(result.rows)},
         )
         return output_file

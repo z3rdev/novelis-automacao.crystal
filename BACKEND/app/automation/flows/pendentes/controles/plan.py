@@ -16,9 +16,10 @@ from app.services.cte_pdf_files import find_pdf_evidence
 
 
 class PendentesPlanBuilder:
-    def __init__(self, cwd: Path, emit: Emit) -> None:
+    def __init__(self, cwd: Path, emit: Emit, *, cache_directories: bool = False) -> None:
         self.cwd = cwd
         self.emit = emit
+        self._directory_files = {} if cache_directories else None
 
     async def build(
         self,
@@ -84,6 +85,7 @@ class PendentesPlanBuilder:
             "faltandoComprovante": faltando_comprovante,
             "prontosComprovante": [item["cte"] for item in checked if self._has_pdf_xml(item)],
             "prontosChamado": prontos_chamado,
+            "skipChamadoMissingComprovante": skip_chamado_missing_comprovante,
             "rows": [item["row"] for item in checked],
             "checked": checked,
         }
@@ -121,7 +123,7 @@ class PendentesPlanBuilder:
             check_cancelled()
             cte = self._cte_key(normalized)
             row = {**normalized, "cte": cte, "key": self._row_key(normalized)}
-            evidence = self._resolve_evidence(row, rodopar_config, xml_config, comprovante_config)
+            evidence = self.resolve_evidence(row, rodopar_config, xml_config, comprovante_config)
             checked.append({"cte": cte, "row": row, "evidence": evidence})
         return normalized_rows, checked
 
@@ -168,7 +170,7 @@ class PendentesPlanBuilder:
         evidence = item["evidence"]
         return bool(evidence["pdfFile"] and evidence["xmlFile"])
 
-    def _resolve_evidence(
+    def resolve_evidence(
         self,
         row: dict[str, Any],
         rodopar_config: dict[str, Any],
@@ -178,9 +180,9 @@ class PendentesPlanBuilder:
         pdf_file = find_pdf_evidence(
             self._resolve(rodopar_config.get("downloadTargetDir") or "captures/rodopar-pdfs-downloads"), row,
         )
-        xml_files = matching_xml_files(
-            self._resolve(xml_config.get("downloadDir") or "captures/cte-fazenda-downloads"), row,
-        )
+        xml_directory = self._resolve(xml_config.get("downloadDir") or "captures/cte-fazenda-downloads")
+        xml_files = matching_xml_files(xml_directory, row, entries=(
+            self._all_files(xml_directory, {".xml"}) if self._directory_files is not None else None))
         comprovante_files = self._files_for_row(
             row,
             [self._resolve(comprovante_config.get("targetDir") or "captures/tarifario-downloads")],
@@ -206,6 +208,8 @@ class PendentesPlanBuilder:
         }
 
     def _requires_comprovante(self, row: dict[str, Any]) -> bool:
+        if "requiresComprovante" in row:
+            return bool(row["requiresComprovante"])
         value = (
             row.get("nmgnre")
             or row.get("NMGNRE")
@@ -243,14 +247,23 @@ class PendentesPlanBuilder:
         return [item for item in entries if doc in self._part(item.name)]
 
     def _all_files(self, directory: Path, extensions: set[str]) -> list[Path]:
+        cache_key = (directory, tuple(sorted(extensions)))
+        if self._directory_files is not None and cache_key in self._directory_files:
+            return self._directory_files[cache_key]
         try:
             files = []
             for item in directory.iterdir():
                 check_cancelled()
                 if item.is_file() and item.suffix.lower() in extensions:
                     files.append(item)
+            if self._directory_files is not None:
+                self._directory_files[cache_key] = files
             return files
+        except FileNotFoundError:
+            return []
         except OSError:
+            if self._directory_files is not None:
+                raise
             return []
 
     def _request_row(self, request: RunStartRequest, config: dict[str, Any]) -> dict[str, Any] | None:

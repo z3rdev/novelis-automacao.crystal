@@ -82,6 +82,20 @@ def main():
         "BACKEND/app/tools/dacte_setup.py",
         "BACKEND/pyproject.toml",
     ]}
+    result["operator_and_live_files_sources"] = {name: digest(ROOT / name) for name in [
+        "BACKEND/app/api/routers/sessions.py",
+        "BACKEND/app/services/device_identity.py",
+        "BACKEND/app/services/session_audit.py",
+        "BACKEND/app/infrastructure/session_audit_db.py",
+        "BACKEND/app/services/pending_documents.py",
+        "BACKEND/app/services/hub_service.py",
+        "BACKEND/app/domain/run_state.py",
+        "BACKEND/app/main.py",
+        "FRONTEND-HUB/src/components/app/session-gate.tsx",
+        "FRONTEND-HUB/src/components/app/period-select.tsx",
+        "FRONTEND-HUB/src/routes/pendentes.tsx",
+        "FRONTEND-HUB/src/services/http.ts",
+    ]}
     private = "-PRIVADO" in args.setup.name
     result["operational_configuration"] = {"included": private,
         "contains_operational_credentials": private, "values_recorded_in_manifest": False,

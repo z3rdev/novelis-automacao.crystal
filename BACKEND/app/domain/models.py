@@ -154,7 +154,7 @@ class RunStartRequest(BaseModel):
     rodopar_replay_overlay_enabled: bool | None = None
     manual_ctes: str = ""
     manual_spreadsheet: ManualSpreadsheetInput | None = None
-    pendentes_sql_days_back: int | None = Field(default=None, ge=1, le=90)
+    pendentes_sql_days_back: int | None = Field(default=None, ge=0, le=90)
     pendentes_skip_chamado_missing_comprovante: bool = True
 
 

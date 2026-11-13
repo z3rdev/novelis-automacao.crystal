@@ -39,6 +39,15 @@ class FakeConfig:
     def novelis(self):
         return {}
 
+    def rodopar_pdf(self):
+        return self.values.get("pdf", {})
+
+    def xml_sefaz(self):
+        return self.values.get("xml", {})
+
+    def comprovante_local(self):
+        return self.values.get("proofs", {})
+
     def get(self, key):
         return self.values.get(key, "")
 
@@ -79,6 +88,21 @@ def test_real_http_contract_and_persistent_snapshot_fallback(setup):
     rows = client.get("/api/hub/chamados").json()
     assert rows[0]["valorTotal"] == 123.45
     assert rows[0]["andamento"] == "solucionado"
+
+
+def test_document_availability_changes_without_requerying_sql_or_rewriting_plan(setup, tmp_path):
+    client, hub, automation, source = setup
+    hub.config.values["pdf"] = {"downloadTargetDir": str(tmp_path / "pdfs")}
+    target = tmp_path / "pdfs/cte-10402/CTE_2-10-10402.pdf"
+    original = source.read_bytes()
+    assert client.get("/api/hub/ctes").json()[0]["pdf"] == "faltando"
+    target.parent.mkdir(parents=True)
+    target.write_bytes(b"%PDF-test-data")
+    assert client.get("/api/hub/ctes").json()[0]["pdf"] == "disponivel"
+    target.unlink()
+    assert client.get("/api/hub/ctes").json()[0]["pdf"] == "faltando"
+    assert source.read_bytes() == original
+    assert automation.requests == []
 
 
 def test_batch_deduplicates_and_rejects_a_second_clients_start(setup):

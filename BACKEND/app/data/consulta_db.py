@@ -52,7 +52,7 @@ FROM VW_RECEBER_DELLMAR AS R
   ) AS C
 WHERE
   CAST(R.DATA AS DATE) BETWEEN DATEADD(DAY, ?, CAST(GETDATE() AS DATE))
-    AND DATEADD(DAY, -1, CAST(GETDATE() AS DATE))
+    AND CAST(GETDATE() AS DATE)
   AND (? IS NULL OR R.PAG_GRUPO_CLIENTE_COD = ?)
   AND R.TIPO = 'CTE'
 ORDER BY R.DATA, R.DOCUMENTO;
@@ -128,7 +128,7 @@ def fetch_last_5_days_rows(config: dict[str, Any], days: int = 5) -> SqlConsulta
     if not server or not user or not password:
         raise RuntimeError("Configure CONSULTA_DB_SERVER, CONSULTA_DB_USER e CONSULTA_DB_PASS.")
 
-    days_back = max(1, int(days or 5))
+    days_back = max(0, int(days if days is not None else 5))
     connection_string = _connection_string(config, server, user, password, database)
     for attempt in range(2):
         check_cancelled()
@@ -152,7 +152,7 @@ def _fetch_last_days(
         connection.timeout = max(1, int(config.get("requestTimeoutMs") or 20_000) // 1000)
         group = _optional_int(config.get("pagGrupoClienteCod"))
         with cancellable_cursor(cursor):
-            cursor.execute(SQL_LAST_N_DAYS, -days_back, group, group)
+            cursor.execute(SQL_LAST_N_DAYS, 1 - days_back if days_back else 0, group, group)
             columns = [column[0] for column in cursor.description]
             raw_rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
         return SqlConsultaResult(

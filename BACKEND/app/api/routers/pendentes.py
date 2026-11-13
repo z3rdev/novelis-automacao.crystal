@@ -20,9 +20,10 @@ COMPROVANTE_LABELS = {
 }
 
 
-def _load_plan_rows(settings: Settings) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+def _load_plan_rows(settings: Settings, payload=None) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     path = settings.backend_root.parent / "captures" / "pendentes" / "latest-python.json"
-    payload = read_json(path, {})
+    if payload is None:
+        payload = read_json(path, {})
     if not isinstance(payload, dict):
         payload = {}
 

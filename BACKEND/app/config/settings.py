@@ -16,8 +16,9 @@ class Settings(BaseSettings):
     api_port: int = 8000
     frontend_origin: str = "http://127.0.0.1:5173"
     novelis_sqlite_path: Path | None = Field(default=None, validation_alias="NOVELIS_SQLITE_PATH")
+    login_audit_db_path: Path | None = Field(default=None, validation_alias="LOGIN_AUDIT_DB_PATH")
 
-    @field_validator("novelis_sqlite_path", mode="before")
+    @field_validator("novelis_sqlite_path", "login_audit_db_path", mode="before")
     @classmethod
     def optional_sqlite_path(cls, value):
         return value or None

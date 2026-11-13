@@ -167,6 +167,9 @@ let config: ConfigGroup[] = [
 const clone = <T,>(v: T): T => structuredClone(v);
 
 export const mockApi: AutomationApi = {
+  async getSession() { return { identity: { windows_user: "Demonstração", computer_name: "Ambiente simulado", mac_addresses: [] }, session: null, pending_sync: 0 }; },
+  async login() { throw new Error("A identificação Windows está disponível no backend local."); },
+  async logout() {},
   async ping() { await delay(80); return { ok: true, versao: "demo-1.0", latenciaMs: 12 + Math.floor(Math.random() * 20) }; },
   async getOverview() {
     await delay(120);

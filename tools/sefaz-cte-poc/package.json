@@ -1,0 +1,10 @@
+{
+  "name": "novelis-sefaz-cte-poc",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": { "build": "tsc", "test": "npm run build && node --test dist/protocol.test.js", "start": "node dist/cli.js" },
+  "dependencies": { "fast-xml-parser": "5.12.1" },
+  "devDependencies": { "@types/node": "^24.0.0", "typescript": "5.9.3" },
+  "engines": { "node": ">=22" }
+}

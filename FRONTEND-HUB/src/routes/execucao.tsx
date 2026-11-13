@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageBody, Section } from "@/components/app/page";
+import { PeriodSelect } from "@/components/app/period-select";
 import { Pill, flowLabel } from "@/components/app/status";
 import { useRun, useRunActions, isBusy, RunSummary, StagesView } from "@/components/app/run-panel";
 import { parseCteList } from "@/lib/format";
@@ -70,9 +71,9 @@ function Execucao() {
             <Tabs value={origem} onValueChange={(v) => setOrigem(v as "auto" | "manual")}>
               <TabsList className="grid h-auto w-full grid-cols-1 gap-1 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2"><TabsTrigger value="auto" className="flex-1"><CalendarRange />Consulta automática</TabsTrigger><TabsTrigger value="manual" className="flex-1"><ListPlus />Lista de CT-es</TabsTrigger></TabsList>
               <TabsContent value="auto" className="space-y-1.5 pt-2">
-                <Label htmlFor="dias">Período da consulta (dias)</Label>
-                <Input id="dias" type="number" min={1} max={90} value={dias} onChange={(e) => setDias(Math.max(1, Math.min(90, Number(e.target.value) || 1)))} disabled={busy} className="w-32" />
-                <p className="text-xs text-muted-foreground">Consulta o banco pelos CT-es emitidos nos últimos {dias} dias.</p>
+                <Label>Período da consulta</Label>
+                <PeriodSelect value={dias} onChange={setDias} disabled={busy} />
+                <p className="text-xs text-muted-foreground">{dias === 0 ? "CT-es emitidos hoje." : "O período inclui o dia atual."}</p>
               </TabsContent>
               <TabsContent value="manual" className="space-y-2 pt-2">
                 <div className="flex items-center justify-between">

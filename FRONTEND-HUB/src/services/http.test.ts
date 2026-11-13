@@ -1,9 +1,27 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createHttpApi } from "./http";
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => { vi.unstubAllGlobals(); sessionStorage.clear(); });
 
 describe("adaptador do backend central", () => {
+  it("envia zero para a consulta do dia atual", async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response("{}", { status: 200 }));
+    vi.stubGlobal("fetch", fetcher);
+    await createHttpApi("http://server/api/hub").refreshCtes(0);
+    expect(JSON.parse(fetcher.mock.calls[0]![1].body)).toEqual({ periodoDias: 0 });
+  });
+
+  it("vincula as chamadas a sessao recebida e remove o identificador ao sair", async () => {
+    const fetcher = vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({ session: { id: "unit-session" } }), { status: 200 }))
+      .mockResolvedValueOnce(new Response("{}", { status: 200 })).mockResolvedValueOnce(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetcher);
+    const api = createHttpApi("http://server/api/hub");
+    await api.login("Operador de teste");
+    await api.refreshCtes(5);
+    expect(fetcher.mock.calls[1]![1].headers["X-Operator-Session"]).toBe("unit-session");
+    await api.logout();
+    expect(sessionStorage.getItem("novelis.operator-session:http://server/api/hub")).toBeNull();
+  });
   it("envia toda a lista na mesma execucao", async () => {
     const fetcher = vi.fn().mockResolvedValue(new Response("{}", { status: 200 }));
     vi.stubGlobal("fetch", fetcher);

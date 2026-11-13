@@ -1,0 +1,306 @@
+{
+  "schema_version": 1,
+  "tested_on": "2026-11-13",
+  "test_key": "26261113254104001065570100000028791000028796",
+  "certificate_transport": "Windows CurrentUser/My via Schannel",
+  "certificate_type_determined": false,
+  "a1_pfx_live_test": false,
+  "cons_nsu_live_test": false,
+  "probes": [
+    {
+      "label": "national_public-public",
+      "url": "https://www.cte.fazenda.gov.br/portal/consulta.aspx?tipoConsulta=completa&tipoConteudo=mCK/KoCqru0=",
+      "method": "GET",
+      "certificate": false,
+      "curl_exit_code": 0,
+      "http_status": "200",
+      "error": "",
+      "body_bytes": 23219
+    },
+    {
+      "label": "svsp_qr-public",
+      "url": "https://nfe.fazenda.sp.gov.br/CTeConsulta/qrCode?chCTe=26261113254104001065570100000028791000028796&tpAmb=1",
+      "method": "GET",
+      "certificate": false,
+      "curl_exit_code": 0,
+      "http_status": "200",
+      "error": "",
+      "body_bytes": 6463
+    },
+    {
+      "label": "distribution_wsdl-public",
+      "url": "https://www1.cte.fazenda.gov.br/CTeDistribuicaoDFe/CTeDistribuicaoDFe.asmx?WSDL",
+      "method": "GET",
+      "certificate": false,
+      "curl_exit_code": 0,
+      "http_status": "403",
+      "error": "",
+      "body_bytes": 1233
+    },
+    {
+      "label": "distribution_wsdl-cert",
+      "url": "https://www1.cte.fazenda.gov.br/CTeDistribuicaoDFe/CTeDistribuicaoDFe.asmx?WSDL",
+      "method": "GET",
+      "certificate": true,
+      "curl_exit_code": 0,
+      "http_status": "200",
+      "error": "",
+      "body_bytes": 3829
+    },
+    {
+      "label": "consult_wsdl-public",
+      "url": "https://nfe.fazenda.sp.gov.br/CTeWS/WS/CTeConsultaV4.asmx?WSDL",
+      "method": "GET",
+      "certificate": false,
+      "curl_exit_code": 0,
+      "http_status": "403",
+      "error": "",
+      "body_bytes": 1233
+    },
+    {
+      "label": "consult_wsdl-cert",
+      "url": "https://nfe.fazenda.sp.gov.br/CTeWS/WS/CTeConsultaV4.asmx?WSDL",
+      "method": "GET",
+      "certificate": true,
+      "curl_exit_code": 0,
+      "http_status": "200",
+      "error": "",
+      "body_bytes": 3102
+    }
+  ],
+  "soap": [
+    {
+      "label": "status-no-cert",
+      "timestamp": "2026-11-13T13:24:42.704480+00:00",
+      "url": "https://nfe.fazenda.sp.gov.br/CTeWS/WS/CTeConsultaV4.asmx",
+      "method": "POST",
+      "certificate": false,
+      "curl_exit_code": 0,
+      "http_status": "403",
+      "error": ""
+    },
+    {
+      "label": "status-with-cert",
+      "timestamp": "2026-11-13T13:24:43.102941+00:00",
+      "url": "https://nfe.fazenda.sp.gov.br/CTeWS/WS/CTeConsultaV4.asmx",
+      "method": "POST",
+      "certificate": true,
+      "curl_exit_code": 0,
+      "http_status": "200",
+      "error": "",
+      "cStat": "100",
+      "xMotivo": "Autorizado o uso do CT-e."
+    },
+    {
+      "label": "dist-nsu-with-cert",
+      "timestamp": "2026-11-13T13:24:44.144147+00:00",
+      "url": "https://www1.cte.fazenda.gov.br/CTeDistribuicaoDFe/CTeDistribuicaoDFe.asmx",
+      "method": "POST",
+      "certificate": true,
+      "curl_exit_code": 0,
+      "http_status": "200",
+      "error": "",
+      "cStat": "138",
+      "xMotivo": "documento localizado.",
+      "ultNSU": "000000000003761",
+      "maxNSU": "000000000003907"
+    }
+  ],
+  "node": [
+    {
+      "operation": "status",
+      "timestamp": "2026-11-13T13:43:54.200Z",
+      "url": "https://nfe.fazenda.sp.gov.br/CTeWS/WS/CTeConsultaV4.asmx",
+      "http_status": 200,
+      "cStat": "100",
+      "xMotivo": "Autorizado o uso do CT-e.",
+      "complete_xml_recovered": false
+    },
+    {
+      "operation": "dist",
+      "timestamp": "2026-11-13T13:43:56.918Z",
+      "url": "https://www1.cte.fazenda.gov.br/CTeDistribuicaoDFe/CTeDistribuicaoDFe.asmx",
+      "http_status": 200,
+      "cStat": "138",
+      "xMotivo": "documento localizado.",
+      "input_nsu": "000000000003761",
+      "ultNSU": "000000000003811",
+      "maxNSU": "000000000003907",
+      "document_count": 50,
+      "full_cte_count": 0,
+      "complete_xml_recovered": false
+    },
+    {
+      "operation": "dist",
+      "timestamp": "2026-11-13T13:43:58.863Z",
+      "url": "https://www1.cte.fazenda.gov.br/CTeDistribuicaoDFe/CTeDistribuicaoDFe.asmx",
+      "http_status": 200,
+      "cStat": "138",
+      "xMotivo": "documento localizado.",
+      "input_nsu": "000000000003811",
+      "ultNSU": "000000000003861",
+      "maxNSU": "000000000003907",
+      "document_count": 50,
+      "full_cte_count": 1,
+      "complete_xml_recovered": false
+    },
+    {
+      "operation": "dist",
+      "timestamp": "2026-11-13T13:44:01.434Z",
+      "url": "https://www1.cte.fazenda.gov.br/CTeDistribuicaoDFe/CTeDistribuicaoDFe.asmx",
+      "http_status": 200,
+      "cStat": "138",
+      "xMotivo": "documento localizado.",
+      "input_nsu": "000000000003861",
+      "ultNSU": "000000000003907",
+      "maxNSU": "000000000003907",
+      "document_count": 46,
+      "full_cte_count": 1,
+      "complete_xml_recovered": false
+    }
+  ],
+  "anonymous_public": [
+    {
+      "host": "nfe.fazenda.sp.gov.br",
+      "path": "/CTeConsulta/qrCode",
+      "method": "GET",
+      "http_status": "200",
+      "certificate": false,
+      "captcha": false,
+      "authorized_text": false,
+      "xml_complete": false
+    },
+    {
+      "host": "nfe.fazenda.sp.gov.br",
+      "path": "/CTeConsulta/Consulta/ExibirConsulta",
+      "method": "POST",
+      "http_status": "200",
+      "certificate": false,
+      "captcha": false,
+      "authorized_text": true,
+      "xml_complete": false,
+      "target_key_visible": true,
+      "authorization_of_use_event_present": true,
+      "current_cte_cStat_obtained": false
+    }
+  ],
+  "certificate_portal": [
+    {
+      "host": "www.identityprd.fazenda.sp.gov.br",
+      "path": "/v003/Sefaz.Identity.STS.PortalSSO/Account/Login.aspx",
+      "method": "POST",
+      "http_status": "302"
+    },
+    {
+      "host": "www.identityprd.fazenda.sp.gov.br",
+      "path": "/v003/Sefaz.Identity.STS.Certificado.SSO/LoginSSO.aspx",
+      "method": "GET",
+      "http_status": "302"
+    },
+    {
+      "host": "www.identityprd.fazenda.sp.gov.br",
+      "path": "/v003/Sefaz.Identity.STS.Certificado.SSO/Account/Login.aspx",
+      "method": "GET",
+      "http_status": "302"
+    },
+    {
+      "host": "www.identityprd.fazenda.sp.gov.br",
+      "path": "/v002/Sefaz.Identity.STS.Certificado/LoginCertificado.aspx",
+      "method": "GET",
+      "http_status": "403"
+    }
+  ],
+  "distribution_totals": {
+    "documents": 196,
+    "events": 194,
+    "complete_cte_other_keys": 2,
+    "target_complete_xml": 0,
+    "last_nsu": "000000000003907",
+    "max_nsu": "000000000003907"
+  },
+  "secrets_or_private_certificate_material_included": false,
+  "svrs_public": [
+    {
+      "url": "https://dfe-portal.svrs.rs.gov.br/Dfe/ConsultaPublicaDfe",
+      "method": "GET",
+      "certificate": false,
+      "http_status": "200",
+      "curl_exit_code": 0,
+      "captcha": true,
+      "forms": [
+        "/Bpe/ConsultaPublicaDfe"
+      ],
+      "fields": [
+        {
+          "name": "sistema",
+          "type": "hidden"
+        },
+        {
+          "name": "EhConsultaPublicaSiteSefaz",
+          "type": "hidden"
+        },
+        {
+          "name": "Ambiente",
+          "type": "radio"
+        },
+        {
+          "name": "Ambiente",
+          "type": "radio"
+        },
+        {
+          "name": "ChaveAcessoDfe",
+          "type": "text"
+        }
+      ],
+      "link_paths": [],
+      "complete_xml": false
+    },
+    {
+      "url": "https://dfe-portal.svrs.rs.gov.br/Dfe/ConsultaPublicaDfe",
+      "method": "GET",
+      "certificate": true,
+      "http_status": "200",
+      "curl_exit_code": 0,
+      "captcha": true,
+      "forms": [
+        "/Bpe/ConsultaPublicaDfe"
+      ],
+      "fields": [
+        {
+          "name": "sistema",
+          "type": "hidden"
+        },
+        {
+          "name": "EhConsultaPublicaSiteSefaz",
+          "type": "hidden"
+        },
+        {
+          "name": "Ambiente",
+          "type": "radio"
+        },
+        {
+          "name": "Ambiente",
+          "type": "radio"
+        },
+        {
+          "name": "ChaveAcessoDfe",
+          "type": "text"
+        }
+      ],
+      "link_paths": [],
+      "complete_xml": false
+    }
+  ],
+  "request_messages": [
+    {
+      "operation": "cteConsultaCT",
+      "transport_certificate": true,
+      "soap_xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?><s:Envelope xmlns:s=\"http://www.w3.org/2003/05/soap-envelope\"><s:Body><cteDadosMsg xmlns=\"http://www.portalfiscal.inf.br/cte/wsdl/CTeConsultaV4\"><consSitCTe xmlns=\"http://www.portalfiscal.inf.br/cte\" versao=\"4.00\"><tpAmb>1</tpAmb><xServ>CONSULTAR</xServ><chCTe>26261113254104001065570100000028791000028796</chCTe></consSitCTe></cteDadosMsg></s:Body></s:Envelope>"
+    },
+    {
+      "operation": "cteDistDFeInteresse/distNSU",
+      "transport_certificate": true,
+      "soap_xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?><s:Envelope xmlns:s=\"http://www.w3.org/2003/05/soap-envelope\"><s:Body><cteDistDFeInteresse xmlns=\"http://www.portalfiscal.inf.br/cte/wsdl/CTeDistribuicaoDFe\"><cteDadosMsg><distDFeInt xmlns=\"http://www.portalfiscal.inf.br/cte\" versao=\"1.00\"><tpAmb>1</tpAmb><cUFAutor>26</cUFAutor><CNPJ>13254104001065</CNPJ><distNSU><ultNSU>000000000000000</ultNSU></distNSU></distDFeInt></cteDadosMsg></cteDistDFeInteresse></s:Body></s:Envelope>"
+    }
+  ]
+}

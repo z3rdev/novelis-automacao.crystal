@@ -8,6 +8,7 @@ import { useApi } from "@/services";
 import { fmtDateTime, fmtTime } from "@/lib/format";
 import { navItems, adminItems } from "./app-sidebar";
 import { cn } from "@/lib/utils";
+import { OperatorMenu } from "./session-gate";
 
 export function AppHeader() {
   const { api, mode, setMode, baseUrl } = useApi();
@@ -22,6 +23,7 @@ export function AppHeader() {
       <Separator orientation="vertical" className="h-5" />
       <h1 className="truncate text-sm font-semibold">{current?.title ?? "Automação Novelis"}</h1>
       <div className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-2 text-xs">
+        <OperatorMenu />
         <span className="hidden items-center gap-1 text-muted-foreground md:inline-flex"><RefreshCw className={cn("h-3.5 w-3.5", ov.isFetching && "animate-spin")} />Dados: {fmtDateTime(ov.data?.ultimaAtualizacao)}</span>
         <Tooltip>
           <TooltipTrigger asChild>

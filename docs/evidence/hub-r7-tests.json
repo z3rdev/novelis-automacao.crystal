@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "tested_on": "2026-11-13",
+  "backend": {
+    "passed": 254,
+    "skipped": 4,
+    "log": "runtime/crystal-tests/hub-r7-all-backend-tests-final.log",
+    "warning": "Starlette TestClient deprecation"
+  },
+  "frontend": {
+    "passed": 7,
+    "typescript_no_emit": "passed",
+    "log": "runtime/crystal-tests/hub-r7-frontend-tests.log"
+  },
+  "sefaz_poc": {
+    "passed": 5,
+    "log": "runtime/crystal-tests/sefaz-poc-unit-tests.log"
+  },
+  "ui": {
+    "login": true,
+    "logout": true,
+    "live_pdf_created_and_removed": true,
+    "open_details_updated": true,
+    "period_options": [
+      "Dia atual",
+      "Últimos 5 dias",
+      "Últimos 10 dias",
+      "Últimos 20 dias",
+      "Últimos 30 dias"
+    ],
+    "browser_errors": []
+  },
+  "shared_audit_schema": {
+    "schema_created": true,
+    "schema_version": 1,
+    "integrity": "ok",
+    "sessions": 0,
+    "events": 0
+  },
+  "distribution_cooldown": {
+    "network_request_executed": false,
+    "state_cooldown_active": true,
+    "exit_code": 2,
+    "message": "Aguarde ate 2026-11-13T14:44:01.434Z para nova consulta de distribuicao."
+  },
+  "clean_machine_homologation": "pending",
+  "production_ready": false,
+  "offline_preparation": {
+    "exit_code": 0,
+    "bootstrap_status": "succeeded",
+    "hub_api": true,
+    "browser_fixture": "junction_to_official_bundled_chromium",
+    "python_system_installation_executed": false,
+    "crystal_installation_executed": false,
+    "database": "isolated_local_sqlite",
+    "clean_machine_homologation": false,
+    "session_test": {
+      "installed_mode_login_logout": "passed",
+      "windows_identity_from_backend": true,
+      "audit_replicated": true,
+      "audit_db": "isolated_local_fixture",
+      "shared_business_database_modified": false,
+      "clean_machine_homologation": false
+    }
+  },
+  "package": {
+    "filename": "NovelisCargoHubSetup-0.1.34-r7-PRIVADO-TESTE-NaoDistribuir.exe",
+    "sha256": "03a774e7b1ec783efcd1b5945905a0ab492cc41aa254881ded4059a74bff1ddb",
+    "bytes": 742129502,
+    "source_hashes_match": true,
+    "offline_frontend_matches_installer": true,
+    "build_mode": "development",
+    "production_ready": false
+  },
+  "sefaz_cli_local_regressions": {
+    "network_requests": 0,
+    "http_failure_does_not_impose_distribution_wait": true,
+    "offline_replay_of_real_response_documents": 50,
+    "target_xml_recovered": false,
+    "cli_replay_exit_code": 3
+  }
+}

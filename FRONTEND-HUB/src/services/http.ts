@@ -1,11 +1,13 @@
 import type { AutomationApi, DacteJob } from "./types";
 
 export function createHttpApi(baseUrl: string): AutomationApi {
+  const sessionKey = `novelis.operator-session:${baseUrl.replace(/\/$/, "")}`;
+  const token = () => typeof window === "undefined" ? null : sessionStorage.getItem(sessionKey);
   const req = async <T,>(path: string, init?: RequestInit): Promise<T> => {
     const res = await fetch(`${baseUrl.replace(/\/$/, "")}${path}`, {
       ...init,
       signal: init?.signal ?? AbortSignal.timeout(30000),
-      headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
+      headers: { "Content-Type": "application/json", ...(token() ? { "X-Operator-Session": token()! } : {}), ...(init?.headers ?? {}) },
     });
     if (!res.ok) {
       const error = await res.json().catch(() => null);
@@ -16,6 +18,13 @@ export function createHttpApi(baseUrl: string): AutomationApi {
   const post = <T,>(p: string, body?: unknown) => req<T>(p, { method: "POST", body: JSON.stringify(body ?? {}) });
   const put = <T,>(p: string, body: unknown) => req<T>(p, { method: "PUT", body: JSON.stringify(body) });
   return {
+    getSession: () => req("/session"),
+    async login(operatorName) {
+      const value = await post<import("./types").SessionState>("/session", { operator_name: operatorName });
+      if (value.session) sessionStorage.setItem(sessionKey, value.session.id);
+      return value;
+    },
+    async logout() { await req("/session", { method: "DELETE" }); sessionStorage.removeItem(sessionKey); },
     async ping() {
       const t = performance.now();
       const r = await req<{ versao: string }>("/health/ping");

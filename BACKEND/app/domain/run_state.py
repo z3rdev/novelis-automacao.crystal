@@ -1,14 +1,18 @@
 import asyncio
+import logging
+import sqlite3
 from datetime import UTC, datetime
 
 from app.domain.models import RunSnapshot, RunStatus
+from app.services.session_audit import operator_session
 
 
 class RunState:
-    def __init__(self, store=None) -> None:
+    def __init__(self, store=None, audit=None) -> None:
         self._lock = asyncio.Lock()
         self._snapshot = RunSnapshot()
         self.store = store
+        self.audit = audit
 
     async def restore(self) -> None:
         if self.store:
@@ -21,6 +25,11 @@ class RunState:
     async def _persist(self) -> None:
         if self.store:
             await asyncio.to_thread(self.store.save_run, self._snapshot.model_dump(mode="json"))
+        if self.audit:
+            try:
+                await asyncio.to_thread(self.audit.record_run, self._snapshot.model_dump(mode="json"), operator_session.get())
+            except (OSError, RuntimeError, sqlite3.Error):
+                logging.getLogger(__name__).warning("Falha ao registrar o estado da automacao na fila local de auditoria.")
 
     async def get(self) -> RunSnapshot:
         async with self._lock:

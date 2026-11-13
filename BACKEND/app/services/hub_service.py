@@ -6,23 +6,33 @@ from app.api.routers.pendentes import _load_plan_rows
 from app.data.chamados_reader import read_chamados_payload
 from app.domain.models import RunStartRequest
 from app.services.hub_views import chamado_view, cte_view, job_views, run_view
+from app.services.pending_documents import refresh_files
+from app.services.session_audit import operator_session
 
 
 class HubService:
-    def __init__(self, settings, config, store, automation, event_bus):
+    def __init__(self, settings, config, store, automation, event_bus, audit=None):
         self.settings, self.config, self.store = settings, config, store
         self.automation, self.event_bus = automation, event_bus
+        self.audit = audit
 
     def ctes(self):
-        meta, rows = _load_plan_rows(self.settings)
         source = self.settings.backend_root.parent / "captures/pendentes/latest-python.json"
         if source.is_file():
-            self.store.local_snapshot("pending_plan", {**meta, "rows": rows})
-        else:
-            rows = (self.store.local_snapshot("pending_plan") or self.store.snapshot("pending_plan") or {}).get("rows", [])
-        result = [cte_view(row) for row in rows]
-        if source.is_file():
             payload = json.loads(source.read_text(encoding="utf-8-sig"))
+        else:
+            payload = self.store.local_snapshot("pending_plan") or self.store.snapshot("pending_plan") or {}
+        if "checked" not in payload and payload.get("rows"):
+            payload = {**payload, "checked": [{"cte": row["cte"], "row": row} for row in payload["rows"]]}
+        if "checked" in payload:
+            payload = refresh_files(payload, self.config, self.settings.backend_root.parent)
+            meta, rows = _load_plan_rows(self.settings, payload)
+            self.store.local_snapshot("pending_plan", {**payload, **meta, "rows": rows})
+        else:
+            meta, _ = _load_plan_rows(self.settings, payload)
+            rows = payload.get("rows", [])
+        result = [cte_view(row) for row in rows]
+        if payload.get("checked"):
             indexed = {item["cte"]: item.get("row", {}) for item in payload.get("checked", [])}
             for item in result:
                 raw = indexed.get(item["id"], {})
@@ -46,7 +56,7 @@ class HubService:
         events = await asyncio.to_thread(self.store.events, snapshot["id"])
         return run_view(snapshot, events)
 
-    async def start(self, flow: str, ctes: list[str], days: int):
+    async def start(self, flow: str, ctes: list[str], days: int, session_id: str | None = None):
         known = {"completo", "documentos", "somente_pdf", "somente_xml", "somente_chamados", "consulta"}
         if flow not in known:
             raise ValueError("Fluxo nao suportado.")
@@ -60,21 +70,22 @@ class HubService:
         request = RunStartRequest(flow=selected, dry_run=False, manual_ctes="\n".join(ctes),
                                   sample_cte=",".join(ctes) if selected != "pendentes" else "",
                                   pendentes_sql_days_back=days, execution_scope=scope)
-        await self.automation.start(request)
+        if session_id and self.audit and not await asyncio.to_thread(self.audit.session, session_id):
+            raise ValueError("Sessao encerrada. Entre novamente com o nome do operador.")
+        token = operator_session.set(session_id)
+        try:
+            await self.automation.start(request)
+        finally:
+            operator_session.reset(token)
         return await self.run()
 
     async def overview(self):
-        meta, rows = await asyncio.to_thread(_load_plan_rows, self.settings)
-        source = self.settings.backend_root.parent / "captures/pendentes/latest-python.json"
-        if not source.is_file():
-            saved = await asyncio.to_thread(self.store.local_snapshot, "pending_plan")
-            if not saved:
-                saved = await asyncio.to_thread(self.store.snapshot, "pending_plan")
-            if saved:
-                meta, rows = saved, saved["rows"]
-        return {"naFila": len(rows), "pdfFaltando": meta["faltandoPdfCount"],
-                "xmlFaltando": meta["faltandoXmlCount"], "comprovanteFaltando": meta["faltandoComprovanteCount"],
-                "prontosChamado": meta["prontosChamadoCount"], "ultimaAtualizacao": meta["generatedAt"],
+        rows = await asyncio.to_thread(self.ctes)
+        meta = await asyncio.to_thread(self.store.local_snapshot, "pending_plan") or {}
+        return {"naFila": len(rows), "pdfFaltando": sum(row["pdf"] == "faltando" for row in rows),
+                "xmlFaltando": sum(row["xml"] == "faltando" for row in rows),
+                "comprovanteFaltando": sum(row["comprovante"] == "faltando" for row in rows),
+                "prontosChamado": sum(row["prontoChamado"] for row in rows), "ultimaAtualizacao": meta.get("generatedAt", ""),
                 "execucao": await self.run()}
 
     def jobs(self):
@@ -93,6 +104,9 @@ class HubService:
         groups = [{"id": "banco", "titulo": "Banco operacional SQLite", "fields": [
             {"key": "NOVELIS_SQLITE_PATH", "label": "Arquivo compartilhado", "value": str(self.store.path),
              "readOnly": True, "hint": "Backend local com transacoes coordenadas entre computadores"}]}]
+        if self.audit:
+            groups[0]["fields"].append({"key": "LOGIN_AUDIT_DB_PATH", "label": "Logs de sessoes e automacao",
+                                        "value": str(self.audit.shared_path), "readOnly": True})
         for group, title, keys in [
             ("documentos", "Geracao de documentos", ["CRYSTAL_PDF_ENGINE", "CRYSTAL_QR_PROVIDER"]),
             ("caminhos", "Pastas de documentos", ["RODOPAR_PDF_DOWNLOAD_TARGET_DIR", "XML_SEFAZ_DOWNLOAD_DIR"]),
