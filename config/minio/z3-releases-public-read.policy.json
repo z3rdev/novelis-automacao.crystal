@@ -1,0 +1,23 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "PublicReadDanfeWorkspaceReleases",
+      "Effect": "Allow",
+      "Principal": { "AWS": ["*"] },
+      "Action": ["s3:GetObject"],
+      "Resource": ["arn:aws:s3:::z3-releases/danfe-workspace/*"]
+    },
+    {
+      "Sid": "PublicReadCargoHubClientFiles",
+      "Effect": "Allow",
+      "Principal": { "AWS": ["*"] },
+      "Action": ["s3:GetObject"],
+      "Resource": [
+        "arn:aws:s3:::z3-releases/cargo-hub/latest.json",
+        "arn:aws:s3:::z3-releases/cargo-hub/packages/*",
+        "arn:aws:s3:::z3-releases/cargo-hub/notifications/feed.json"
+      ]
+    }
+  ]
+}

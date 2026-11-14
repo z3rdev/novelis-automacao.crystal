@@ -16,6 +16,8 @@ from app.api.routers import (
     runs,
     sessions,
     steps,
+    updates,
+    operator_features,
 )
 
 
@@ -23,6 +25,8 @@ api_router = APIRouter(prefix="/api")
 api_router.include_router(health.router)
 api_router.include_router(hub.router)
 api_router.include_router(sessions.router)
+api_router.include_router(updates.router)
+api_router.include_router(operator_features.router)
 api_router.include_router(config.router)
 api_router.include_router(chamados.router)
 api_router.include_router(steps.router)

@@ -77,7 +77,7 @@ def main():
     parser.add_argument("--key-field", default="KEY", help="Empty string means a file containing only the key")
     parser.add_argument("--approval", type=Path)
     parser.add_argument("--package-version", default="1.0.1", choices=["1.0.1", "1.0.2"],
-                        help="1.0.1 fixes standard action sequencing; 1.0.2 is reserved for upgrade tests")
+                        help="1.0.1 fixes action sequencing; 1.0.2 upgrades the initial prerequisite")
     parser.add_argument("--verify-only", action="store_true")
     parser.add_argument("--wix", type=Path, default=ROOT / "runtime/tools/wix-4.0.6/tools/net6.0/any/wix.dll")
     args = parser.parse_args()

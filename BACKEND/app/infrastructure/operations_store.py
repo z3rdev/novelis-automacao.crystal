@@ -9,6 +9,7 @@ from pathlib import Path
 from threading import RLock
 
 from app.infrastructure.sqlite_lease import WriterLease
+from app.infrastructure.hub_features_schema import FEATURE_SCHEMA
 
 
 class OperationsStore:
@@ -37,10 +38,11 @@ class OperationsStore:
                     name TEXT PRIMARY KEY, value TEXT NOT NULL);
                 PRAGMA user_version=1;
             """)
+            db.executescript(FEATURE_SCHEMA)
         self.ready = True
 
     @contextmanager
-    def _connection(self):
+    def connection(self):
         with self._lock:
             lease = WriterLease(self.path)
             lease.acquire()
@@ -58,6 +60,14 @@ class OperationsStore:
                         db.close()
                 finally:
                     lease.close()
+
+    _connection = connection
+
+    def run_by_id(self, run_id: str) -> dict | None:
+        with self.connection() as db:
+            row = db.execute("SELECT payload FROM execution_runs WHERE id=?", (run_id,)).fetchone()
+        value = json.loads(row[0]) if row else None
+        return value if value and value.get("machine_id") == self.machine_id else None
 
     def close(self) -> None:
         with self._lock:

@@ -1,0 +1,364 @@
+.brand-mark {
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 25%;
+  aspect-ratio: 1;
+}
+.brand-mark img {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 142%;
+  height: 142%;
+  max-width: none;
+  transform: translate(-50%, -50%);
+  object-fit: contain;
+}
+.brand-name {
+  font-weight: 700;
+  letter-spacing: -0.055em;
+  white-space: nowrap;
+}
+.brand-name > span {
+  color: var(--brand-teal);
+  margin-left: 0.12em;
+}
+.login-layout {
+  display: grid;
+  min-height: 100vh;
+  background: var(--card);
+}
+.login-device-panel {
+  position: relative;
+  display: none;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 4rem;
+  padding: clamp(2rem, 5vw, 5.5rem);
+  background: url("../assets/brand/login-background.png") center / cover;
+}
+.login-form-panel {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1.5rem 5rem;
+}
+.developer-credit {
+  position: absolute;
+  right: clamp(1.5rem, 3vw, 3rem);
+  bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  font-size: .75rem;
+  color: var(--brand-gray);
+}
+.developer-credit a {
+  border-radius: .2rem;
+  color: var(--brand-navy);
+  font-weight: 600;
+  text-decoration: none;
+}
+.developer-credit a:hover { color: var(--brand-teal); text-decoration: underline; }
+.developer-credit a:focus-visible { outline: 2px solid var(--brand-teal); outline-offset: 4px; }
+.device-card {
+  position: relative;
+  width: 100%;
+  padding: clamp(1.25rem, 3vw, 2.25rem);
+  border: 1px solid oklch(1 0 0 / 85%);
+  border-radius: 1.25rem;
+  background: oklch(1 0 0 / 83%);
+  color: var(--brand-navy);
+  box-shadow: 0 16px 60px oklch(0.264046 0.067832 255.3434 / 7%);
+  backdrop-filter: blur(18px);
+}
+.login-form-panel .device-card {
+  background: var(--background);
+  border-color: var(--border);
+  box-shadow: none;
+}
+.cargo-app-content {
+  min-height: 100vh;
+  transition:
+    opacity 0.5s ease,
+    transform 0.5s ease;
+}
+.cargo-app-content[data-ready="false"] {
+  opacity: 0;
+  transform: translateY(10px);
+}
+.cargo-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: oklch(0.98 0.004 240);
+  background: var(--brand-navy);
+  transition:
+    opacity 0.5s ease,
+    transform 0.5s ease,
+    filter 0.5s ease;
+}
+.cargo-splash[data-phase="exit"] {
+  opacity: 0;
+  transform: scale(1.045);
+  filter: blur(8px);
+  pointer-events: none;
+}
+.cargo-splash__background {
+  position: absolute;
+  inset: -10%;
+  background: url("../assets/brand/login-background.png") center / cover;
+  opacity: 0.08;
+  animation: cargo-background 5s ease-out both;
+}
+.cargo-splash__beam {
+  position: absolute;
+  inset: -50%;
+  transform: rotate(-38deg);
+  pointer-events: none;
+}
+.cargo-splash__beam::before,
+.cargo-splash__beam::after {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  width: 2px;
+  background: linear-gradient(transparent, var(--brand-teal), transparent);
+  box-shadow: 0 0 30px var(--brand-teal);
+  animation: cargo-beam 2.4s ease-in-out both;
+}
+.cargo-splash__beam::before {
+  left: 35%;
+}
+.cargo-splash__beam::after {
+  right: 35%;
+  animation-delay: 0.3s;
+}
+.cargo-splash__identity {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 3rem;
+}
+.cargo-splash__orbit {
+  position: absolute;
+  top: -6px;
+  left: calc(50% - 126px);
+  width: 252px;
+  height: 252px;
+  border-radius: 50%;
+  background: conic-gradient(
+    transparent 15%,
+    oklch(0.703753 0.123018 182.5025 / 65%),
+    transparent 65%
+  );
+  mask: radial-gradient(transparent 68%, black 69%, black 70%, transparent 71%);
+  animation:
+    cargo-orbit 2.8s linear infinite,
+    cargo-reveal 0.7s ease both;
+}
+.cargo-splash__mark {
+  position: relative;
+  width: 152px;
+  height: 152px;
+  perspective: 800px;
+  border-radius: 25%;
+  box-shadow:
+    0 28px 65px oklch(0.12 0.04 255 / 60%),
+    0 0 70px oklch(0.703753 0.123018 182.5025 / 20%);
+  animation:
+    cargo-mark-in 0.85s cubic-bezier(0.16, 1, 0.3, 1) both,
+    cargo-float 2.4s ease-in-out 0.85s infinite;
+}
+.cargo-splash__mark .brand-mark {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.cargo-splash__alternate {
+  animation: cargo-alternate 2.4s ease-in-out 0.7s both;
+}
+.cargo-splash__shine {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+}
+.cargo-splash__shine::after {
+  content: "";
+  position: absolute;
+  inset: -50%;
+  background: linear-gradient(
+    110deg,
+    transparent 42%,
+    oklch(0.98 0.015 180 / 65%) 50%,
+    transparent 58%
+  );
+  animation: cargo-shine 1.4s ease 0.8s both;
+}
+.cargo-splash__name {
+  margin-top: 2rem;
+  font-size: clamp(2.5rem, 5vw, 3.6rem);
+  animation: cargo-rise 0.7s ease 0.35s both;
+}
+.cargo-splash__subtitle {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.15em;
+  color: oklch(0.85 0.02 245);
+  animation: cargo-rise 0.7s ease 0.5s both;
+}
+.cargo-splash__loading {
+  width: 210px;
+  height: 3px;
+  margin-top: 2.5rem;
+  overflow: hidden;
+  border-radius: 10px;
+  background: oklch(1 0 0 / 12%);
+  animation: cargo-reveal 0.6s ease 0.7s both;
+}
+.cargo-splash__loading span {
+  display: block;
+  width: 45%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--brand-teal);
+  animation: cargo-loading 1.3s ease-in-out infinite;
+}
+.cargo-splash__status {
+  margin-top: 0.8rem;
+  font-size: 0.75rem;
+  color: oklch(0.8 0.025 245);
+  animation: cargo-reveal 0.6s ease 0.8s both;
+}
+html[data-native="true"] {
+  user-select: none;
+  -webkit-user-select: none;
+}
+html[data-native="true"]
+  :is(input, textarea, [contenteditable="true"], [contenteditable="true"] *) {
+  user-select: text;
+  -webkit-user-select: text;
+}
+html[data-native="true"] :is(img, a) {
+  -webkit-user-drag: none;
+}
+@media (min-width: 1024px) {
+  .login-layout {
+    grid-template-columns: minmax(360px, 1fr) minmax(420px, 1fr);
+  }
+  .login-device-panel {
+    display: flex;
+  }
+}
+@keyframes cargo-mark-in {
+  from {
+    opacity: 0;
+    transform: perspective(700px) translateY(45px) rotateY(-35deg) rotateX(15deg) scale(0.65);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: perspective(700px) translateY(0) rotateY(0) rotateX(0) scale(1);
+    filter: blur(0);
+  }
+}
+@keyframes cargo-float {
+  50% {
+    transform: translateY(-8px) rotateZ(-2deg);
+  }
+}
+@keyframes cargo-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes cargo-shine {
+  from {
+    transform: translateX(-110%) rotate(10deg);
+  }
+  to {
+    transform: translateX(110%) rotate(10deg);
+  }
+}
+@keyframes cargo-alternate {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  45%,
+  65% {
+    opacity: 1;
+  }
+}
+@keyframes cargo-beam {
+  from {
+    opacity: 0;
+    transform: translateY(-70%);
+  }
+  45% {
+    opacity: 0.6;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(70%);
+  }
+}
+@keyframes cargo-background {
+  from {
+    transform: scale(1.12) translateX(3%);
+  }
+  to {
+    transform: scale(1) translateX(0);
+  }
+}
+@keyframes cargo-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes cargo-reveal {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes cargo-loading {
+  from {
+    transform: translateX(-110%);
+  }
+  to {
+    transform: translateX(330%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cargo-splash *,
+  .cargo-splash *::before,
+  .cargo-splash *::after {
+    animation: none !important;
+  }
+  .cargo-splash,
+  .cargo-app-content {
+    transition: none;
+  }
+  .cargo-splash__alternate,
+  .cargo-splash__beam,
+  .cargo-splash__shine {
+    display: none;
+  }
+}

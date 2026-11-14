@@ -1,3 +1,10 @@
+import type { DeveloperConfig, ReleaseProbe, UpdateStatus, PublishRequest, PublishStatus } from "./releases";
+import type { DeveloperMonitor } from "./developer-monitor";
+export type { DeveloperMonitor, MonitoredDevice, MonitoredSession } from "./developer-monitor";
+import type { HubNotification, NotificationInput, ScheduleInput, AutomationSchedule, ScheduleList } from "./operator-features";
+export type { HubNotification, NotificationInput, ScheduleInput, AutomationSchedule, ScheduleList } from "./operator-features";
+export type { DeveloperConfig, ReleaseProbe, ReleaseManifest, UpdateStatus, PublishRequest, PublishStatus } from "./releases";
+
 export type DocStatus = "disponivel" | "faltando" | "nao_exige";
 export type RunState = "aguardando" | "executando" | "parando" | "concluida" | "falhou" | "cancelada";
 export type StageId = "consulta" | "pdf" | "xml" | "comprovantes" | "chamados";
@@ -77,6 +84,24 @@ export interface AutomationStep { id: string; ordem: number; nome: string; acao:
 export interface BrowserFrame { url: string; titulo: string; acao: string; screenshot?: string; ativo: boolean }
 
 export interface AutomationApi {
+  getDeveloperMonitor(): Promise<DeveloperMonitor>;
+  getNotifications(): Promise<HubNotification[]>;
+  markNotificationRead(id: string): Promise<void>;
+  getDeveloperNotifications(): Promise<HubNotification[]>;
+  publishNotification(body: NotificationInput): Promise<HubNotification>;
+  archiveNotification(id: string): Promise<void>;
+  getSchedules(): Promise<ScheduleList>;
+  createSchedule(body: ScheduleInput): Promise<AutomationSchedule>;
+  updateSchedule(id: string, body: ScheduleInput): Promise<AutomationSchedule>;
+  removeSchedule(id: string): Promise<void>;
+  getDeveloperConfig(): Promise<DeveloperConfig>;
+  testReleaseConnection(): Promise<ReleaseProbe>;
+  getPublishStatus(): Promise<PublishStatus>;
+  publishRelease(body: PublishRequest): Promise<PublishStatus>;
+  getUpdateStatus(): Promise<UpdateStatus>;
+  checkUpdates(): Promise<UpdateStatus>;
+  downloadUpdate(): Promise<UpdateStatus>;
+  installUpdate(): Promise<UpdateStatus>;
   getSession(): Promise<SessionState>;
   login(operatorName: string): Promise<SessionState>;
   logout(): Promise<void>;

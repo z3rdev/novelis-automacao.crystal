@@ -94,7 +94,7 @@ def test_failed_verification_records_safe_reason_and_http_status(tmp_path, monke
     module = helper()
     secret = "SYNTHETIC_CREDENTIAL_MUST_NOT_APPEAR"
     monkeypatch.setenv("HTTP_PROXY", f"http://user:{secret}@127.0.0.1:1")
-    monkeypatch.setattr(module, "start_backend", lambda *_args: Alive())
+    monkeypatch.setattr(module, "start_backend", lambda *_args, **_kwargs: Alive())
     monkeypatch.setattr(module, "stop_backend", lambda _process: None)
 
     def refuse(*_args):
@@ -110,3 +110,23 @@ def test_failed_verification_records_safe_reason_and_http_status(tmp_path, monke
     assert report["checks"]["hub_http_status"] == 503
     assert report["status"] == "failed"
     assert secret not in text
+
+
+def test_installer_probe_does_not_inherit_the_old_desktop_lifetime(tmp_path, monkeypatch):
+    module = helper()
+    monkeypatch.setenv("NOVELIS_DESKTOP_PARENT_PID", "123")
+    monkeypatch.setenv("NOVELIS_DESKTOP_PARENT_CREATED_AT", "100")
+    observed = {}
+    def spawn(*args, **kwargs):
+        observed.clear()
+        observed.update(kwargs["env"])
+        return Alive()
+    monkeypatch.setattr(module.subprocess, "Popen", spawn)
+    module.start_backend(tmp_path, 8123, None, readiness_probe=True)
+    assert observed["NOVELIS_BACKEND_READINESS"] == "1"
+    assert "NOVELIS_DESKTOP_PARENT_PID" not in observed
+    assert "NOVELIS_DESKTOP_PARENT_CREATED_AT" not in observed
+    monkeypatch.setenv("NOVELIS_BACKEND_READINESS", "1")
+    module.start_backend(tmp_path, 8123, None)
+    assert "NOVELIS_BACKEND_READINESS" not in observed
+    assert observed["NOVELIS_DESKTOP_PARENT_PID"] == "123"

@@ -3,6 +3,8 @@ $ErrorActionPreference = 'Stop'
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 $HubRoot = Join-Path $ProjectRoot 'FRONTEND-HUB'
 $env:CARGO_BUILD_JOBS = [string]$Jobs
+$env:VITE_DEFAULT_API_MODE = 'local'
+$env:VITE_API_BASE_URL = 'http://127.0.0.1:8000/api/hub'
 $VsWhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
 $VisualCpp = if (Test-Path -LiteralPath $VsWhere) {
     & $VsWhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath

@@ -22,6 +22,7 @@ function Stop-OwnedBackendProcesses {
 
 Set-Content -LiteralPath (Join-Path $Root "runtime\desktop-service.stop") -Value "stop" -Encoding UTF8
 Remove-ItemProperty -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name 'AutomacaoNovelisServico' -ErrorAction SilentlyContinue
+Remove-ItemProperty -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name 'Novelis Cargo Hub' -ErrorAction SilentlyContinue
 Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
 Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
 Stop-OwnedBackendProcesses $Root

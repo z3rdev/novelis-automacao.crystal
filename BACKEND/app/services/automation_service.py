@@ -7,6 +7,7 @@ from app.config.legacy_config import LegacyConfig
 from app.config.settings import Settings
 from app.domain.models import RunSnapshot, RunStartRequest
 from app.domain.run_state import RunState
+from app.domain.automation_errors import AutomationBusyError
 from app.infrastructure.event_bus import EventBus
 from app.services.browser_driver import BrowserDriver
 from app.services.capture_cleanup import clean_capture_roots
@@ -45,7 +46,7 @@ class AutomationService:
             require_legacy_rodopar(self.legacy_config)
         async with self._control_lock:
             if self._task and not self._task.done():
-                raise RuntimeError("A execucao anterior ainda esta encerrando. Aguarde a parada concluir.")
+                raise AutomationBusyError("A execucao anterior ainda esta encerrando. Aguarde a parada concluir.")
             snapshot = await self.run_state.start(request.flow, request.dry_run)
             self._cancellation = RunCancellation()
             self._task = asyncio.create_task(self._execute(request, snapshot.id, self._cancellation))

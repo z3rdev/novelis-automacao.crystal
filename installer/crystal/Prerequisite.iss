@@ -26,7 +26,7 @@ begin
   ExtractCrystalTools;
   if CrystalRuntimeFunctional then
     Exit;
-  ExtractTemporaryFile('NovelisCrystalRDC-x86-1.0.1.msi');
+  ExtractTemporaryFile('{#CrystalRuntimeFilename}');
   ExtractTemporaryFile('crystal-runtime.manifest.json');
   ResultPath := ExpandConstant('{tmp}\crystal-install-result.json');
   Arguments := '-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "' +

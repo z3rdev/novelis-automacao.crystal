@@ -107,3 +107,29 @@ def test_available_local_source_remains_supported_after_sql_failure(tmp_path, mo
             config, {}, {}, {}, RunStartRequest(), "fallback")
 
     assert asyncio.run(scenario())["total"] == 0
+
+
+def test_period_query_does_not_fall_back_to_the_retired_local_spreadsheet(tmp_path):
+    settings = SimpleNamespace(backend_root=tmp_path / "BACKEND", pre_url="about:blank",
+                               pre_html5_url="about:blank", pre_step_delay_ms=0, consulta_browser_headless=False)
+    config = LegacyConfig(settings)
+    events = EventBus()
+    service = AutomationService(settings, config, None, events, RunState(), SimpleNamespace(close=AsyncMock()))
+    async def run():
+        await service.start(RunStartRequest(flow="consulta-pendentes", dry_run=False, pendentes_sql_days_back=0))
+        await asyncio.wait_for(service._task, timeout=3)
+        snapshot = await service.current()
+        assert snapshot.status == "failed"
+        assert "conexão SQL habilitada" in snapshot.message
+        assert "CONSULTA.xlsx" not in snapshot.message
+        assert "pendentes.consulta_failed" not in [event.kind for event in await events.history()]
+    asyncio.run(run())
+
+
+def test_period_query_preserves_the_actual_sql_failure(tmp_path, monkeypatch):
+    def fail(*args):
+        raise RuntimeError("Banco SQL indisponível (4060)")
+    monkeypatch.setattr("app.automation.flows.pendentes.steps.pendentes.fetch_last_5_days_rows", fail)
+    flow = PendentesFlow(SimpleNamespace(backend_root=tmp_path / "BACKEND"), None, None, AsyncMock())
+    with pytest.raises(RuntimeError, match="4060"):
+        asyncio.run(flow._refresh_sql_source({"refreshSql": True, "strictSql": True}, {"enabled": True}, "period-query", 0))

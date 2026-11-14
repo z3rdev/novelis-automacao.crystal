@@ -65,6 +65,10 @@ class PendentesFlow:
             run_id,
             self.legacy_config.consulta_db(),
         )
+        if request.pendentes_sql_days_back is not None and not (
+            request.manual_ctes or request.manual_spreadsheet or request.sample_cte or request.sample_documento
+        ):
+            config = {**config, "refreshSql": True, "strictSql": True}
         sql_source = await self._refresh_sql_source(
             config,
             self.legacy_config.consulta_db(),
@@ -194,6 +198,8 @@ class PendentesFlow:
         days_back: int | None = None,
     ) -> Path | None:
         if not config.get("refreshSql") or not db_config.get("enabled"):
+            if config.get("strictSql"):
+                raise RuntimeError("Consulta por período exige a conexão SQL habilitada. Verifique CONSULTA_DB_ENABLED e a configuração do banco neste computador.")
             await emit_step(
                 self.emit, run_id, "pendentes.sql_disabled",
                 "Consulta SQL desabilitada na configuracao; verificando fonte local.",

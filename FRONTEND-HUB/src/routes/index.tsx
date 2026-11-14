@@ -31,7 +31,7 @@ function Overview() {
   const v = (n?: number) => (d ? n : "…");
   return (
     <PageBody>
-      {ov.isError && <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">Não foi possível obter os dados do backend: {(ov.error as Error).message}. Verifique se o serviço está ativo ou alterne para o modo Demonstração.</div>}
+      {ov.isError && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm"><p>{(ov.error as Error).message} {d ? "Exibindo os últimos dados recebidos." : "Aguardando os dados do backend."}</p><Button size="sm" variant="outline" onClick={() => ov.refetch()} disabled={ov.isFetching}><RefreshCw className={ov.isFetching ? "animate-spin" : ""} />Tentar novamente</Button></div>}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-muted-foreground">Última atualização dos dados: <strong className="text-foreground">{fmtDateTime(d?.ultimaAtualizacao)}</strong></p>
         <div className="flex gap-2">

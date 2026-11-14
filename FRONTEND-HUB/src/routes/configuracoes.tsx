@@ -9,6 +9,8 @@ import { PageBody, Section } from "@/components/app/page";
 import { Pill } from "@/components/app/status";
 import { useApi, type ConfigGroup } from "@/services";
 import { toast } from "sonner";
+import { DeveloperSettings } from "@/components/app/developer-settings";
+import { DesktopSettings } from "@/components/app/desktop-settings";
 
 export const Route = createFileRoute("/configuracoes")({
   head: () => ({ meta: [
@@ -33,6 +35,8 @@ function Config() {
   const set = (gi: number, fi: number, v: string) => setGroups((g) => g.map((x, i) => (i !== gi ? x : { ...x, fields: x.fields.map((f, j) => (j === fi ? { ...f, value: v } : f)) })));
   return (
     <PageBody>
+      <DesktopSettings />
+      <DeveloperSettings />
       <Section title="Conexão com o backend">
         <div className="flex flex-wrap items-end gap-2">
           <div className="space-y-1.5"><Label htmlFor="url">URL base da API</Label><Input id="url" className="w-80 font-mono" value={url} onChange={(e) => setUrl(e.target.value)} /></div>

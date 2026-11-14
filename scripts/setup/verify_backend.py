@@ -49,10 +49,15 @@ def hub_ready(port: int) -> bool:
     return bool(local_json(port, "/api/hub/health/ping", 3).get("versao"))
 
 
-def start_backend(root: Path, port: int, log):
+def start_backend(root: Path, port: int, log, *, readiness_probe: bool = False):
     env = {k: v for k, v in os.environ.items() if k not in {"PYTHONHOME", "PYTHONPATH"}}
     env["PYTHONNOUSERSITE"] = "1"
     env["PLAYWRIGHT_BROWSERS_PATH"] = str(root / "ms-playwright")
+    env.pop("NOVELIS_BACKEND_READINESS", None)
+    if readiness_probe:
+        env["NOVELIS_BACKEND_READINESS"] = "1"
+        env.pop("NOVELIS_DESKTOP_PARENT_PID", None)
+        env.pop("NOVELIS_DESKTOP_PARENT_CREATED_AT", None)
     return subprocess.Popen([str(root / "BACKEND/.venv/Scripts/python.exe"), "-I", "-m",
         "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", str(port),
         "--workers", "1", "--no-access-log"], cwd=root / "BACKEND", env=env,
@@ -129,7 +134,7 @@ def verify(root: Path, *, interactive_network: bool = False) -> dict:
             port = sock.getsockname()[1]
         result["port"] = port
         with (runtime / "backend-setup.log").open("w", encoding="utf-8") as log:
-            process = start_backend(root, port, log)
+            process = start_backend(root, port, log, readiness_probe=True)
             data = wait_ready(root, port, process)
         result.update(status="succeeded", hub_api=True, version=data["version"],
                       identity=os.environ.get("USERNAME", ""), port=port)

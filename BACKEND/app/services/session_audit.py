@@ -85,6 +85,25 @@ class SessionAudit:
         with self._lock, connection(self.local_path, local=True) as db:
             return db.execute("SELECT COUNT(*) FROM sync_queue").fetchone()[0]
 
+    def heartbeat(self, device: dict, snapshot: dict) -> None:
+        timestamp = device["last_seen_at"]
+        stopped = device["backend_status"] == "stopped"
+        with self._lock, connection(self.local_path, local=True) as db:
+            current = db.execute("SELECT instance_id FROM devices WHERE id=?", (device["id"],)).fetchone()
+            if stopped and current and current["instance_id"] != device["instance_id"]:
+                return
+            sessions = []
+            for row in db.execute("SELECT * FROM sessions WHERE status='active'").fetchall():
+                value = {**dict(row), "last_seen_at": timestamp, "updated_at": timestamp,
+                         "automation_status": STATES[snapshot["status"]], "run_id": snapshot.get("id")}
+                if stopped:
+                    value.update(status="interrupted", logout_at=timestamp)
+                sessions.append(value)
+            # Keep the latest periodic signal during an outage; retain login/logout/run events.
+            db.execute("DELETE FROM sync_queue WHERE json_extract(payload,'$.heartbeat')=1 "
+                       "AND json_extract(payload,'$.device.id')=?", (device["id"],))
+            enqueue(db, {"heartbeat": not stopped, "device": device, "sessions": sessions})
+
     def sync(self) -> int:
         with self._sync_lock:
             with self._lock, connection(self.local_path, local=True) as db:

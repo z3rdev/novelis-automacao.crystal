@@ -1,3 +1,4 @@
+import os
 import re
 import unicodedata
 from datetime import UTC, datetime
@@ -252,10 +253,12 @@ class PendentesPlanBuilder:
             return self._directory_files[cache_key]
         try:
             files = []
-            for item in directory.iterdir():
-                check_cancelled()
-                if item.is_file() and item.suffix.lower() in extensions:
-                    files.append(item)
+            with os.scandir(directory) as entries:
+                for entry in entries:
+                    check_cancelled()
+                    item = Path(entry.path)
+                    if item.suffix.lower() in extensions and entry.is_file():
+                        files.append(item)
             if self._directory_files is not None:
                 self._directory_files[cache_key] = files
             return files

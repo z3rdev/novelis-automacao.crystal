@@ -10,17 +10,25 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AgendamentosRouteImport } from './routes/agendamentos'
 import { Route as AvancadoRouteImport } from './routes/avancado'
 import { Route as ChamadosRouteImport } from './routes/chamados'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as DocumentosRouteImport } from './routes/documentos'
 import { Route as ExecucaoRouteImport } from './routes/execucao'
 import { Route as MonitorRouteImport } from './routes/monitor'
+import { Route as NotificacoesDevRouteImport } from './routes/notificacoes-dev'
 import { Route as PendentesRouteImport } from './routes/pendentes'
+import { Route as UsuariosDevRouteImport } from './routes/usuarios-dev'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgendamentosRoute = AgendamentosRouteImport.update({
+  id: '/agendamentos',
+  path: '/agendamentos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AvancadoRoute = AvancadoRouteImport.update({
@@ -53,85 +61,116 @@ const MonitorRoute = MonitorRouteImport.update({
   path: '/monitor',
   getParentRoute: () => rootRouteImport,
 } as any)
+const NotificacoesDevRoute = NotificacoesDevRouteImport.update({
+  id: '/notificacoes-dev',
+  path: '/notificacoes-dev',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PendentesRoute = PendentesRouteImport.update({
   id: '/pendentes',
   path: '/pendentes',
   getParentRoute: () => rootRouteImport,
 } as any)
+const UsuariosDevRoute = UsuariosDevRouteImport.update({
+  id: '/usuarios-dev',
+  path: '/usuarios-dev',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/agendamentos': typeof AgendamentosRoute
   '/avancado': typeof AvancadoRoute
   '/chamados': typeof ChamadosRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/documentos': typeof DocumentosRoute
   '/execucao': typeof ExecucaoRoute
   '/monitor': typeof MonitorRoute
+  '/notificacoes-dev': typeof NotificacoesDevRoute
   '/pendentes': typeof PendentesRoute
+  '/usuarios-dev': typeof UsuariosDevRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/agendamentos': typeof AgendamentosRoute
   '/avancado': typeof AvancadoRoute
   '/chamados': typeof ChamadosRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/documentos': typeof DocumentosRoute
   '/execucao': typeof ExecucaoRoute
   '/monitor': typeof MonitorRoute
+  '/notificacoes-dev': typeof NotificacoesDevRoute
   '/pendentes': typeof PendentesRoute
+  '/usuarios-dev': typeof UsuariosDevRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/agendamentos': typeof AgendamentosRoute
   '/avancado': typeof AvancadoRoute
   '/chamados': typeof ChamadosRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/documentos': typeof DocumentosRoute
   '/execucao': typeof ExecucaoRoute
   '/monitor': typeof MonitorRoute
+  '/notificacoes-dev': typeof NotificacoesDevRoute
   '/pendentes': typeof PendentesRoute
+  '/usuarios-dev': typeof UsuariosDevRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/agendamentos'
     | '/avancado'
     | '/chamados'
     | '/configuracoes'
     | '/documentos'
     | '/execucao'
     | '/monitor'
+    | '/notificacoes-dev'
     | '/pendentes'
+    | '/usuarios-dev'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/agendamentos'
     | '/avancado'
     | '/chamados'
     | '/configuracoes'
     | '/documentos'
     | '/execucao'
     | '/monitor'
+    | '/notificacoes-dev'
     | '/pendentes'
+    | '/usuarios-dev'
   id:
     | '__root__'
     | '/'
+    | '/agendamentos'
     | '/avancado'
     | '/chamados'
     | '/configuracoes'
     | '/documentos'
     | '/execucao'
     | '/monitor'
+    | '/notificacoes-dev'
     | '/pendentes'
+    | '/usuarios-dev'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AgendamentosRoute: typeof AgendamentosRoute
   AvancadoRoute: typeof AvancadoRoute
   ChamadosRoute: typeof ChamadosRoute
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   DocumentosRoute: typeof DocumentosRoute
   ExecucaoRoute: typeof ExecucaoRoute
   MonitorRoute: typeof MonitorRoute
+  NotificacoesDevRoute: typeof NotificacoesDevRoute
   PendentesRoute: typeof PendentesRoute
+  UsuariosDevRoute: typeof UsuariosDevRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -141,6 +180,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agendamentos': {
+      id: '/agendamentos'
+      path: '/agendamentos'
+      fullPath: '/agendamentos'
+      preLoaderRoute: typeof AgendamentosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/avancado': {
@@ -185,6 +231,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MonitorRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/notificacoes-dev': {
+      id: '/notificacoes-dev'
+      path: '/notificacoes-dev'
+      fullPath: '/notificacoes-dev'
+      preLoaderRoute: typeof NotificacoesDevRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/pendentes': {
       id: '/pendentes'
       path: '/pendentes'
@@ -192,18 +245,28 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PendentesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/usuarios-dev': {
+      id: '/usuarios-dev'
+      path: '/usuarios-dev'
+      fullPath: '/usuarios-dev'
+      preLoaderRoute: typeof UsuariosDevRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AgendamentosRoute: AgendamentosRoute,
   AvancadoRoute: AvancadoRoute,
   ChamadosRoute: ChamadosRoute,
   ConfiguracoesRoute: ConfiguracoesRoute,
   DocumentosRoute: DocumentosRoute,
   ExecucaoRoute: ExecucaoRoute,
   MonitorRoute: MonitorRoute,
+  NotificacoesDevRoute: NotificacoesDevRoute,
   PendentesRoute: PendentesRoute,
+  UsuariosDevRoute: UsuariosDevRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

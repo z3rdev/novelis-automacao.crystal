@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 
 from app.domain.models import RunSnapshot, RunStatus
 from app.services.session_audit import operator_session
+from app.domain.automation_errors import AutomationBusyError
 
 
 class RunState:
@@ -38,7 +39,8 @@ class RunState:
     async def start(self, flow: str, dry_run: bool) -> RunSnapshot:
         async with self._lock:
             if self._snapshot.status in {"running", "stopping"}:
-                raise RuntimeError("Já existe uma execução ativa.")
+                raise AutomationBusyError("Já existe uma execução ativa.")
+            previous = self._snapshot
             self._snapshot = RunSnapshot(
                 status="running",
                 flow=flow,
@@ -46,7 +48,11 @@ class RunState:
                 message="Execução iniciada.",
                 started_at=datetime.now(UTC),
             )
-            await self._persist()
+            try:
+                await self._persist()
+            except (OSError, RuntimeError, sqlite3.Error, asyncio.CancelledError):
+                self._snapshot = previous
+                raise
             return self._snapshot.model_copy(deep=True)
 
     async def update(

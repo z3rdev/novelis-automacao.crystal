@@ -1,11 +1,14 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Monitor, UserRound, Truck, LogOut, Loader2 } from "lucide-react";
+import { UserRound, LogOut, Loader2, RefreshCw, ArrowRight } from "lucide-react";
 import { useApi, type OperatorSession, type SessionState } from "@/services";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { BrandMark, BrandName } from "./brand";
+import { DeviceCard } from "./device-card";
+import { DeveloperCredit } from "./developer-credit";
 
 const SessionContext = createContext<{ session: OperatorSession | null; logout: () => void }>({
   session: null,
@@ -62,33 +65,18 @@ export function SessionGate({ children }: { children: ReactNode }) {
     );
   const identity = query.data?.identity;
   return (
-    <div className="grid min-h-screen w-full bg-background lg:grid-cols-[minmax(320px,0.9fr)_minmax(480px,1.1fr)]">
-      <aside className="hidden flex-col justify-between bg-sidebar p-12 text-sidebar-foreground lg:flex">
-        <div className="flex items-center gap-3">
-          <Truck className="h-9 w-9" />
-          <span className="text-xl font-semibold">Novelis Cargo Hub</span>
-        </div>
-        <div className="space-y-5">
-          <h1 className="max-w-sm break-all text-4xl font-semibold leading-tight">
-            {identity?.computer_name ?? "Dispositivo local"}
-          </h1>
-          <div className="border-t border-sidebar-border pt-5 text-sm">
-            <p className="text-sidebar-foreground/65">Conta Windows</p>
-            <p className="mt-1 break-all font-mono">{identity?.windows_user ?? "Identificando…"}</p>
-          </div>
-        </div>
-        <p className="text-sm text-sidebar-foreground/60">
-          Registro de acesso e execução por operador e dispositivo.
-        </p>
+    <div className="login-layout">
+      <aside className="login-device-panel">
+        <div className="relative flex items-center gap-3"><BrandMark tone="white" className="h-14 w-14" /><BrandName className="text-3xl" /></div>
+        <DeviceCard identity={identity} />
       </aside>
-      <main className="flex items-center justify-center px-6 py-12">
-        <div className="w-full max-w-md space-y-8">
+      <main className="login-form-panel">
+        <div className="w-full max-w-sm space-y-8">
           <div>
-            <div className="mb-8 flex items-center gap-2 text-primary lg:hidden">
-              <Truck />
-              Novelis Cargo Hub
+            <div className="mb-10 flex items-center gap-3 lg:hidden">
+              <BrandMark className="h-12 w-12" /><BrandName className="text-2xl" />
             </div>
-            <h2 className="text-3xl font-semibold tracking-tight">Entrar</h2>
+            <h2 className="text-3xl font-semibold tracking-tight text-primary">Entrar no Cargo Hub</h2>
             <p className="mt-2 text-sm text-muted-foreground">
               Informe seu nome para identificar esta sessão de trabalho.
             </p>
@@ -104,6 +92,7 @@ export function SessionGate({ children }: { children: ReactNode }) {
               <Label htmlFor="operator-name">Nome do operador</Label>
               <Input
                 id="operator-name"
+                className="h-12 rounded-lg text-base"
                 autoComplete="name"
                 autoFocus
                 maxLength={100}
@@ -112,29 +101,21 @@ export function SessionGate({ children }: { children: ReactNode }) {
                 placeholder="Seu nome"
               />
             </div>
-            <div className="rounded-lg border bg-card p-4 text-sm">
-              <div className="mb-3 flex items-center gap-2 font-medium">
-                <Monitor className="h-4 w-4" />
-                {identity?.computer_name ?? "Identificando dispositivo…"}
-              </div>
-              <p className="break-all text-muted-foreground">{identity?.windows_user}</p>
-              <p className="mt-2 break-all font-mono text-xs text-muted-foreground">
-                MAC {identity?.mac_addresses.join(" · ") || "não disponível"}
-              </p>
-            </div>
+            <DeviceCard identity={identity} className="lg:hidden" />
             {query.isError && (
-              <p role="alert" className="text-sm text-destructive">
-                Não foi possível conectar ao backend. {(query.error as Error).message}
-              </p>
+              <div role="alert" className="space-y-3 rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive">
+                <p>{(query.error as Error).message}</p>
+                <Button variant="outline" size="sm" type="button" onClick={() => query.refetch()} disabled={query.isFetching}><RefreshCw className={query.isFetching ? "animate-spin" : ""} />Tentar novamente</Button>
+              </div>
             )}
             <Button
-              className="w-full"
+              className="h-12 w-full rounded-lg text-base"
               size="lg"
               type="submit"
               disabled={!identity || name.trim().length < 2 || login.isPending}
             >
-              {login.isPending ? <Loader2 className="animate-spin" /> : <UserRound />}Entrar no
-              Cargo Hub
+              {login.isPending ? <Loader2 className="animate-spin" /> : <UserRound />}
+              Entrar no Cargo Hub<ArrowRight className="ml-auto" />
             </Button>
           </form>
           <button
@@ -144,6 +125,7 @@ export function SessionGate({ children }: { children: ReactNode }) {
             Abrir demonstração
           </button>
         </div>
+        <DeveloperCredit />
       </main>
     </div>
   );

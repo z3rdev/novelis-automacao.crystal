@@ -4,6 +4,7 @@ import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
 
+from app.infrastructure.device_registry_schema import DEVICE_SCHEMA, apply_device
 from app.infrastructure.sqlite_lease import WriterLease
 
 SESSION_COLUMNS = ("id", "machine_id", "operator_name", "windows_user", "computer_name", "mac_addresses",
@@ -39,6 +40,7 @@ def connection(path: Path, *, local: bool = False):
                 CREATE INDEX IF NOT EXISTS ix_audit_run ON automation_events(run_id, recorded_at);
                 PRAGMA user_version=1;
             """)
+            db.executescript(DEVICE_SCHEMA)
             if local:
                 db.executescript("""
                     CREATE TABLE IF NOT EXISTS audit_runs (run_id TEXT PRIMARY KEY, session_id TEXT, status TEXT NOT NULL);
@@ -55,6 +57,8 @@ def connection(path: Path, *, local: bool = False):
 
 
 def apply(db, payload: dict) -> None:
+    if device := payload.get("device"):
+        apply_device(db, device)
     columns = ",".join(SESSION_COLUMNS)
     updates = ",".join(f"{column}=excluded.{column}" for column in SESSION_COLUMNS if column != "id")
     for session in payload.get("sessions", []):

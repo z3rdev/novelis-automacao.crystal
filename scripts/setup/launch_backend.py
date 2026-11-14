@@ -1,10 +1,13 @@
 """Start the installed local API once, without rerunning pip or Python installers."""
 import json
+import os
 import msvcrt
 import sys
 import time
 from pathlib import Path
 from urllib.error import URLError
+
+import psutil
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from network_access import ensure_database_access
@@ -44,8 +47,27 @@ def launch(root: Path, port: int = 8000, *, interactive_network: bool = False):
         if existing is not None:
             if not valid_health(existing, root) or not hub_ready(port):
                 raise ReadinessError("port_occupied_by_different_or_unavailable_backend")
-            return
+            previous_parent = str(existing.get("desktopParentPid") or "")
+            requested_parent = os.environ.get("NOVELIS_DESKTOP_PARENT_PID", "")
+            if previous_parent and requested_parent and previous_parent != requested_parent and not psutil.pid_exists(int(previous_parent)):
+                retiring_deadline = time.monotonic() + 20
+                while existing is not None:
+                    if time.monotonic() >= retiring_deadline:
+                        raise ReadinessError("previous_desktop_backend_still_stopping")
+                    time.sleep(0.3)
+                    try:
+                        existing = health(port)
+                    except (URLError, OSError, TimeoutError):
+                        existing = None
+            else:
+                return
         ensure_database_access(root, interactive=interactive_network)
+        if parent_pid := os.environ.get("NOVELIS_DESKTOP_PARENT_PID"):
+            parent = psutil.Process(int(parent_pid))
+            expected = root / "novelis-cargo-hub.exe"
+            if Path(parent.exe()).resolve() != expected.resolve():
+                raise ReadinessError("desktop_parent_identity_mismatch")
+            os.environ["NOVELIS_DESKTOP_PARENT_CREATED_AT"] = str(parent.create_time())
         with (root / "runtime/backend-local.log").open("a", encoding="utf-8") as log:
             process = start_backend(root, port, log)
         try:

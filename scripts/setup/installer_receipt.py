@@ -5,9 +5,12 @@ import hashlib
 import json
 import re
 import struct
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "scripts"))
+from crystal.policy import distribution_approval
 
 
 def digest(path):
@@ -20,15 +23,24 @@ def inventory(folder):
             for path in sorted(folder.rglob("*")) if path.is_file()}
 
 
+def packaged_sources(folder):
+    return {path.relative_to(folder).as_posix(): digest(path) for path in sorted(folder.rglob("*"))
+            if path.is_file() and "__pycache__" not in path.parts
+            and path.suffix not in {".pyc", ".pyo", ".log"}
+            and path.name != ".env" and not path.name.startswith(".env.")}
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--setup", type=Path, required=True)
     parser.add_argument("--mode", choices=["development", "distribution"], required=True)
+    parser.add_argument("--approval", type=Path)
     args = parser.parse_args()
     inputs = ROOT / "runtime/installer-inputs"
     crystal = json.loads((inputs / "crystal/crystal-runtime.manifest.json").read_text())
     if digest(inputs / "crystal" / crystal["filename"]) != crystal["sha256"]:
         raise RuntimeError("Staged Crystal MSI differs from its manifest")
+    approval = distribution_approval(args.approval, crystal["sha256"]) if args.mode == "distribution" else None
     version = json.loads((ROOT / "runtime/hub-build-config.json").read_text(encoding="utf-8-sig"))["version"]
     version_source = (ROOT / "DESKTOP/automacao_novelis_desktop/config.py").read_text(encoding="utf-8")
     if re.search(r'APP_VERSION\s*=\s*"([^"]+)"', version_source).group(1) != version:
@@ -49,6 +61,16 @@ def main():
         "wheels": inventory(inputs / "wheels"),
         "clean_machine_homologation": "pending", "production_ready": False,
         "published": False, "licensing_status": "see_crystal_approval_and_homologation"}
+    if approval:
+        result["distribution_approval"] = {"record_sha256": digest(args.approval),
+            "approved_by": approval["approved_by"], "approved_at": approval["approved_at"],
+            "deployment_scope": approval["deployment_scope"],
+            "evidence_kind": approval.get("evidence_kind", "documented_approval"),
+            "independently_verified": approval.get("independently_verified", False)}
+    result["backend_files"] = packaged_sources(ROOT / "BACKEND/app")
+    result["scripts_files"] = packaged_sources(ROOT / "scripts")
+    result["desktop_sources"] = inventory(ROOT / "FRONTEND-HUB/src-tauri/src")
+    result["desktop_icon_sha256"] = digest(ROOT / "FRONTEND-HUB/src-tauri/icons/icon.ico")
     revision = re.search(r"-(r[1-9][0-9]*)-", args.setup.name)
     result["installer_revision"] = revision.group(1) if revision else None
     result["configuration_timing"] = "before_bootstrap_run"

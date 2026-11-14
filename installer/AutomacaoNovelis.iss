@@ -1,6 +1,9 @@
 #ifndef MyAppVersion
 #error Compile usando scripts/build-installer.ps1 para definir a versao real.
 #endif
+#ifndef CrystalRuntimeFilename
+#error Compile usando scripts/build-installer.ps1 para identificar o MSI validado.
+#endif
 
 #define MyAppName "Novelis Cargo Hub"
 #define MyAppPublisher "Novelis"
@@ -57,6 +60,7 @@ WizardStyle=modern
 CloseApplications=yes
 RestartApplications=no
 UninstallDisplayIcon={app}\{#MyAppExeName}
+SetupIconFile=..\FRONTEND-HUB\src-tauri\icons\icon.ico
 SetupLogging=yes
 
 [Languages]
@@ -66,10 +70,11 @@ Name: "brazilianportuguese"; MessagesFile: "compiler:Languages\BrazilianPortugue
 Source: ".\crystal\runtime-probe.ps1"; Flags: dontcopy
 Source: ".\crystal\inspect-runtime.ps1"; Flags: dontcopy
 Source: "..\scripts\install-crystal-runtime.ps1"; Flags: dontcopy
-Source: "..\runtime\installer-inputs\crystal\NovelisCrystalRDC-x86-1.0.1.msi"; Flags: dontcopy
+Source: "..\runtime\installer-inputs\crystal\{#CrystalRuntimeFilename}"; Flags: dontcopy
 Source: "..\runtime\installer-inputs\crystal\crystal-runtime.manifest.json"; Flags: dontcopy
 Source: "..\FRONTEND-HUB\src-tauri\target\release\novelis-cargo-hub.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: ".\.automacao-novelis-install"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\runtime\installer-inputs\release\installed-release.json"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\runtime\installer-inputs\python312\*"; DestDir: "{app}\runtime\python312"; Flags: recursesubdirs createallsubdirs ignoreversion
 Source: "..\runtime\installer-inputs\webview2\*"; DestDir: "{app}\installer-cache\webview2"; Flags: ignoreversion
 Source: ".\cache\vc_redist.x64.exe"; DestDir: "{app}\installer-cache"; Flags: ignoreversion skipifsourcedoesntexist
@@ -91,7 +96,7 @@ Source: ".\crystal\*.ps1"; DestDir: "{app}\installer\crystal"; Flags: ignorevers
 Source: "..\docs\dacte-installer.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 Source: "..\DESKTOP\*"; DestDir: "{app}\DESKTOP"; Flags: recursesubdirs createallsubdirs ignoreversion; Excludes: "__pycache__\*,*.pyc,*.pyo"
 Source: "..\FRONTEND-HUB\dist-desktop\*"; DestDir: "{app}\FRONTEND-HUB\dist-desktop"; Flags: recursesubdirs createallsubdirs ignoreversion
-Source: "..\FRONTEND\src\assets\icon.desktop.ico"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "..\FRONTEND-HUB\src-tauri\icons\icon.ico"; DestDir: "{app}"; DestName: "icon.desktop.ico"; Flags: ignoreversion
 Source: "..\scripts\*"; DestDir: "{app}\scripts"; Flags: recursesubdirs createallsubdirs ignoreversion; Excludes: "__pycache__\*,*.pyc,*.pyo"
 Source: "..\README.md"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 Source: "..\DESKTOP\README.md"; DestDir: "{app}\DESKTOP"; Flags: ignoreversion skipifsourcedoesntexist
@@ -121,7 +126,7 @@ Filename: "powershell.exe"; Parameters: "-NoProfile -NonInteractive -ExecutionPo
 Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -Command ""$p = '{app}\installer-cache\vc_redist.x64.exe'; if (Test-Path -LiteralPath $p) {{ & $p /install /quiet /norestart }}; exit 0"""; WorkingDir: "{app}"; StatusMsg: "Instalando runtime Visual C++..."; Flags: runhidden waituntilterminated
 Filename: "powershell.exe"; Parameters: "{code:BootstrapArguments}"; WorkingDir: "{app}"; StatusMsg: "Preparando Python local e validando a API do Cargo Hub..."; Flags: runhidden waituntilterminated; BeforeInstall: PrepareBackendInstallation; AfterInstall: VerifyBackendPreparation
 Filename: "powershell.exe"; Parameters: "{code:DacteArguments}"; WorkingDir: "{app}"; StatusMsg: "Preparando e verificando DACTE e componentes x86..."; Flags: runhidden waituntilterminated; Check: BackendIsPrepared
-Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\install-desktop-service.ps1"" -SkipExecutableBuild -SkipShortcut"; WorkingDir: "{app}"; StatusMsg: "Configurando inicializacao do backend nesta conta..."; Flags: runhidden waituntilterminated; Check: HubIsPrepared
+Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\install-desktop-service.ps1"" -SkipExecutableBuild -SkipShortcut"; WorkingDir: "{app}"; StatusMsg: "Preparando inicializacao do Cargo Hub nesta conta..."; Flags: runhidden waituntilterminated; Check: HubIsPrepared
 Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"; Description: "Abrir Novelis Cargo Hub"; Flags: nowait postinstall skipifsilent; Check: HubIsPrepared
 Filename: "{app}\runtime\installation\dacte-diagnostic.html"; Description: "Ver diagnostico de instalacao DACTE"; Flags: shellexec postinstall skipifsilent; Check: DacteDiagnosticExists
 

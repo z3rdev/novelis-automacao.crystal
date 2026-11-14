@@ -4,6 +4,28 @@ import { createHttpApi } from "./http";
 afterEach(() => { vi.unstubAllGlobals(); sessionStorage.clear(); });
 
 describe("adaptador do backend central", () => {
+  it("repete uma leitura quando ocorre timeout e recupera os dados", async () => {
+    const fetcher = vi.fn().mockRejectedValueOnce(new DOMException("signal timed out", "TimeoutError"))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ naFila: 8 }), { status: 200 }));
+    vi.stubGlobal("fetch", fetcher);
+    expect(await createHttpApi("http://server/api/hub").getOverview()).toEqual({ naFila: 8 });
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+
+  it("informa o timeout em portugues depois da tentativa de recuperacao", async () => {
+    const fetcher = vi.fn().mockRejectedValue(new DOMException("signal timed out", "TimeoutError"));
+    vi.stubGlobal("fetch", fetcher);
+    await expect(createHttpApi("http://server/api/hub").listCtes()).rejects.toThrow("A consulta ao backend demorou além do esperado");
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+
+  it("mantem uma unica solicitacao de execucao quando ocorre timeout", async () => {
+    const fetcher = vi.fn().mockRejectedValue(new DOMException("signal timed out", "TimeoutError"));
+    vi.stubGlobal("fetch", fetcher);
+    await expect(createHttpApi("http://server/api/hub").startRun({ flow: "completo" })).rejects.toThrow("A consulta ao backend demorou");
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
   it("envia zero para a consulta do dia atual", async () => {
     const fetcher = vi.fn().mockResolvedValue(new Response("{}", { status: 200 }));
     vi.stubGlobal("fetch", fetcher);

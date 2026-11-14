@@ -1,6 +1,8 @@
 from datetime import datetime, timezone
+import os
 from pathlib import Path
 import re
+import json
 
 from fastapi import APIRouter
 
@@ -21,7 +23,18 @@ async def health() -> dict[str, str | bool]:
         "workspaceRoot": str(settings.backend_root.parent),
         "playwrightDriverOk": _playwright_driver_ok(settings.backend_root),
         "checkedAt": datetime.now(timezone.utc).isoformat(),
+        "desktopParentPid": os.environ.get("NOVELIS_DESKTOP_PARENT_PID", ""),
     }
+
+
+def _read_release_version(root: Path) -> str:
+    try:
+        installed = json.loads((root / "installed-release.json").read_text(encoding="utf-8-sig"))
+        if re.fullmatch(r"\d+\.\d+\.\d+(?:-r[1-9]\d*)?", installed["version"]):
+            return installed["version"]
+    except (OSError, ValueError, KeyError, TypeError):
+        pass
+    return _read_app_version(root)
 
 
 def _read_app_version(root: Path) -> str:

@@ -4,20 +4,52 @@ export function createHttpApi(baseUrl: string): AutomationApi {
   const sessionKey = `novelis.operator-session:${baseUrl.replace(/\/$/, "")}`;
   const token = () => typeof window === "undefined" ? null : sessionStorage.getItem(sessionKey);
   const req = async <T,>(path: string, init?: RequestInit): Promise<T> => {
-    const res = await fetch(`${baseUrl.replace(/\/$/, "")}${path}`, {
-      ...init,
-      signal: init?.signal ?? AbortSignal.timeout(30000),
-      headers: { "Content-Type": "application/json", ...(token() ? { "X-Operator-Session": token()! } : {}), ...(init?.headers ?? {}) },
-    });
-    if (!res.ok) {
-      const error = await res.json().catch(() => null);
-      throw new Error(typeof error?.detail === "string" ? error.detail : `Backend respondeu ${res.status} em ${path}`);
+    const attempts = !init?.method || init.method === "GET" ? 2 : 1;
+    for (let attempt = 0; attempt < attempts; attempt++) {
+      try {
+        const res = await fetch(`${baseUrl.replace(/\/$/, "")}${path}`, {
+          ...init,
+          signal: init?.signal ?? AbortSignal.timeout(30000),
+          headers: { "Content-Type": "application/json", ...(token() ? { "X-Operator-Session": token()! } : {}), ...(init?.headers ?? {}) },
+        });
+        if (!res.ok) {
+          const error = await res.json().catch(() => null);
+          throw new Error(typeof error?.detail === "string" ? error.detail : `Backend respondeu ${res.status} em ${path}`);
+        }
+        return res.status === 204 ? (undefined as T) : ((await res.json()) as T);
+      } catch (error) {
+        const name = error && typeof error === "object" && "name" in error ? String(error.name) : "";
+        const timeout = ["TimeoutError", "AbortError"].includes(name);
+        const network = name === "TypeError";
+        if ((timeout || network) && !init?.signal?.aborted && attempt + 1 < attempts) continue;
+        if (timeout) throw new Error("A consulta ao backend demorou além do esperado. Verifique a conexão com as pastas de rede e tente novamente.");
+        if (network) throw new Error("A conexão com o backend local foi interrompida. Tentando reconectar nas próximas consultas.");
+        throw error;
+      }
     }
-    return res.status === 204 ? (undefined as T) : ((await res.json()) as T);
+    throw new Error("Não foi possível concluir a consulta ao backend.");
   };
   const post = <T,>(p: string, body?: unknown) => req<T>(p, { method: "POST", body: JSON.stringify(body ?? {}) });
   const put = <T,>(p: string, body: unknown) => req<T>(p, { method: "PUT", body: JSON.stringify(body) });
   return {
+    getDeveloperMonitor: () => req("/developer/monitor"),
+    getNotifications: () => req("/notifications"),
+    markNotificationRead: (id) => post(`/notifications/${encodeURIComponent(id)}/read`),
+    getDeveloperNotifications: () => req("/developer/notifications"),
+    publishNotification: (body) => post("/developer/notifications", body),
+    archiveNotification: (id) => post(`/developer/notifications/${encodeURIComponent(id)}/archive`),
+    getSchedules: () => req("/schedules"),
+    createSchedule: (body) => post("/schedules", body),
+    updateSchedule: (id, body) => put(`/schedules/${encodeURIComponent(id)}`, body),
+    removeSchedule: (id) => req(`/schedules/${encodeURIComponent(id)}`, { method: "DELETE" }),
+    getDeveloperConfig: () => req("/developer"),
+    testReleaseConnection: () => post("/developer/releases/test"),
+    getPublishStatus: () => req("/developer/releases/publish"),
+    publishRelease: (body) => post("/developer/releases/publish", body),
+    getUpdateStatus: () => req("/updates"),
+    checkUpdates: () => post("/updates/check"),
+    downloadUpdate: () => post("/updates/download"),
+    installUpdate: () => post("/updates/install"),
     getSession: () => req("/session"),
     async login(operatorName) {
       const value = await post<import("./types").SessionState>("/session", { operator_name: operatorName });

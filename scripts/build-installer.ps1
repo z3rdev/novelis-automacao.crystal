@@ -121,8 +121,16 @@ function Ensure-Wheelhouse {
   New-Item -ItemType Directory -Force $WheelhousePayloadDir | Out-Null
   Get-ChildItem -LiteralPath $WheelhousePayloadDir -File -Filter '*.whl' |
     ForEach-Object { Remove-Item -LiteralPath $_.FullName -Force }
-  Invoke-Checked $PythonExe -m pip download --no-index --only-binary=:all: `
-    --find-links $WheelhouseDir --dest $WheelhousePayloadDir -r $WheelRequirements
+  $OfflineDownloadArgs = @('-m', 'pip', 'download', '--no-index', '--only-binary=:all:',
+    '--find-links', $WheelhouseDir, '--dest', $WheelhousePayloadDir, '-r', $WheelRequirements)
+  try {
+    Invoke-Checked $PythonExe @OfflineDownloadArgs
+  } catch {
+    Write-Host 'Completando o cache offline para as dependencias atuais do backend...'
+    Invoke-Checked $PythonExe -m pip download --only-binary=:all: --find-links $WheelhouseDir `
+      --dest $WheelhouseDir -r $WheelRequirements
+    Invoke-Checked $PythonExe @OfflineDownloadArgs
+  }
 }
 
 function Install-BackendPackageForBuild {
@@ -210,6 +218,11 @@ $prepareArgs = @((Join-Path $Root 'scripts\prepare-installer-inputs.py'), '--mod
 if ($CrystalApproval) { $prepareArgs += @('--approval', $CrystalApproval) }
 if ($OperationalEnvPath) { $prepareArgs += @('--operational-env', $OperationalEnvPath) }
 Invoke-Checked $PythonExe @prepareArgs
+$StagedCrystal = Get-Content -LiteralPath (Join-Path $Root 'runtime\installer-inputs\crystal\crystal-runtime.manifest.json') -Raw | ConvertFrom-Json
+$CrystalRuntimeFilename = [string]$StagedCrystal.filename
+if ($CrystalRuntimeFilename -notmatch '^NovelisCrystalRDC-x86-[0-9]+\.[0-9]+\.[0-9]+\.msi$') {
+  throw 'Nome do pre-requisito Crystal invalido para o pacote integrado.'
+}
 if ($OperationalEnvPath) {
   $env:NOVELIS_PRIVATE_INSTALLER_DIRECTORY = $InstallerDir
   Invoke-Checked $PythonExe -c "import os,sys; from pathlib import Path; sys.path.insert(0,str(Path('scripts').resolve())); from crystal.policy import restrict_directory; restrict_directory(Path(os.environ['NOVELIS_PRIVATE_INSTALLER_DIRECTORY']))"
@@ -232,7 +245,13 @@ Invoke-Checked -FilePath powershell.exe -Arguments @('-NoProfile', '-ExecutionPo
   '-File', (Join-Path $Root 'scripts\build-hub-desktop.ps1'), '-NoBundle', '-Version', $Version)
 
 $Iscc = Get-InnoCompiler
-$innoArgs = @("/DMyAppVersion=$Version")
+$ReleaseInput = Join-Path $Root 'runtime\installer-inputs\release'
+New-Item -ItemType Directory -Force -Path $ReleaseInput | Out-Null
+$InstalledVersion = $Version
+if ($InstallerRevision) { $InstalledVersion += "-$InstallerRevision" }
+@{ version = $InstalledVersion } | ConvertTo-Json |
+  Set-Content -LiteralPath (Join-Path $ReleaseInput 'installed-release.json') -Encoding UTF8
+$innoArgs = @("/DMyAppVersion=$Version", "/DCrystalRuntimeFilename=$CrystalRuntimeFilename")
 if ($InstallerRevision) { $innoArgs += "/DInstallerRevision=$InstallerRevision" }
 if ($OperationalEnvPath) { $innoArgs += '/DPrivateConfiguration' }
 if ($BuildMode -eq 'development') { $innoArgs += '/DCrystalDevelopment' }
@@ -251,4 +270,6 @@ if (-not (Test-Path $SetupPath)) {
 }
 
 Write-Host "Instalador gerado em $SetupPath"
-Invoke-Checked $PythonExe (Join-Path $Root 'scripts\setup\installer_receipt.py') --setup $SetupPath --mode $BuildMode
+$ReceiptArguments = @((Join-Path $Root 'scripts\setup\installer_receipt.py'), '--setup', $SetupPath, '--mode', $BuildMode)
+if ($CrystalApproval) { $ReceiptArguments += @('--approval', $CrystalApproval) }
+Invoke-Checked $PythonExe @ReceiptArguments

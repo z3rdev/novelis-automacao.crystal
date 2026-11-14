@@ -188,3 +188,47 @@ def test_unconfigured_store_returns_clear_error():
     app.include_router(router, prefix="/api")
     with TestClient(app) as client:
         assert client.get("/api/hub/health/ping").status_code == 503
+
+def test_concurrent_document_readers_share_inflight_check_and_later_reads_refresh(setup, monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Event, Lock
+    from unittest.mock import Mock
+
+    _, hub, _, _ = setup
+    reading, waiting, release = Event(), Event(), Event()
+
+    class ObservedLock:
+        def __init__(self):
+            self.lock = Lock()
+            self.entries = 0
+
+        def __enter__(self):
+            self.entries += 1
+            if self.entries == 2:
+                waiting.set()
+            self.lock.acquire()
+
+        def __exit__(self, *args):
+            self.lock.release()
+
+    def read():
+        reading.set()
+        assert release.wait(timeout=5)
+        return [{'id': 'fixture'}]
+
+    reader = Mock(side_effect=read)
+    monkeypatch.setattr(hub, '_read_ctes', reader)
+    monkeypatch.setattr(hub, '_files_lock', ObservedLock())
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        first = pool.submit(hub.ctes)
+        assert reading.wait(timeout=5)
+        second = pool.submit(hub.ctes)
+        try:
+            assert waiting.wait(timeout=5)
+        finally:
+            release.set()
+        a, b = first.result(timeout=5), second.result(timeout=5)
+    assert a == b and a is not b
+    assert reader.call_count == 1
+    hub.ctes()
+    assert reader.call_count == 2

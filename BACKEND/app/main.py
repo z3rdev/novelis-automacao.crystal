@@ -1,23 +1,36 @@
 import asyncio
 import logging
+import os
+import sqlite3
 from contextlib import suppress
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.router import api_router
+from app.api.routers.health import _read_release_version
 from app.config.env_catalog import EnvCatalog
 from app.config.legacy_config import LegacyConfig
 from app.config.settings import get_settings
 from app.domain.run_state import RunState
 from app.infrastructure.event_bus import EventBus
+from app.infrastructure.notifications import NotificationRepository
 from app.infrastructure.operations_store import OperationsStore
+from app.infrastructure.schedules import ScheduleRepository
 from app.services.automation_service import AutomationService
 from app.services.browser_driver import BrowserDriver
 from app.services.crystal_reports.service import CrystalReportService
 from app.services.dacte_xml import XmlDacteService
+from app.services.desktop_lifecycle import monitor_desktop
+from app.services.device_presence import DevicePresence
 from app.services.hub_service import HubService
 from app.services.mapping_repository import MappingRepository
+from app.services.notification_server import NotificationServer
+from app.services.notifications import NotificationService
+from app.services.releases.config import DeveloperConfig
+from app.services.releases.publisher import ReleasePublisher
+from app.services.releases.service import ReleaseService
+from app.services.scheduler import ScheduleEngine
 from app.services.session_audit import SessionAudit
 from app.services.step_repository import StepRepository
 
@@ -44,6 +57,7 @@ def install_loop_exception_filter() -> None:
 def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(title=settings.app_name)
+    app.state.readiness_probe = os.environ.get("NOVELIS_BACKEND_READINESS") == "1"
 
     app.add_middleware(
         CORSMiddleware,
@@ -62,6 +76,8 @@ def create_app() -> FastAPI:
     run_state = RunState(store=store, audit=audit)
 
     app.state.settings = settings
+    app.state.releases = ReleaseService(settings.backend_root.parent, _read_release_version(settings.backend_root.parent))
+    app.state.release_publisher = ReleasePublisher(settings.backend_root.parent, app.state.releases.storage)
     app.state.env_catalog = EnvCatalog(settings)
     app.state.legacy_config = LegacyConfig(settings)
     app.state.crystal_reports = CrystalReportService(settings, app.state.legacy_config)
@@ -70,6 +86,7 @@ def create_app() -> FastAPI:
     app.state.mapping_repository = mapping_repository
     app.state.event_bus = event_bus
     app.state.run_state = run_state
+    app.state.device_presence = DevicePresence(audit, settings.backend_root.parent, run_state) if audit and not app.state.readiness_probe else None
     app.state.operations_store = store
     app.state.session_audit = audit
     preview_browser = BrowserDriver(settings)
@@ -83,24 +100,46 @@ def create_app() -> FastAPI:
         preview_browser,
     )
     app.state.hub = HubService(settings, app.state.legacy_config, store, app.state.automation, event_bus, audit) if store else None
+    app.state.notifications = NotificationService(NotificationRepository(store),
+        NotificationServer(DeveloperConfig(settings.backend_root))) if store else None
+    app.state.scheduler = ScheduleEngine(ScheduleRepository(store), app.state.hub, audit, event_bus) if store else None
 
     app.include_router(api_router)
 
     @app.on_event("startup")
     async def startup_resources() -> None:
         install_loop_exception_filter()
+        app.state.desktop_parent_task = None if app.state.readiness_probe else monitor_desktop()
         if store:
             await asyncio.to_thread(store.initialize)
             app.state.legacy_config.values.update(await asyncio.to_thread(store.preferences))
+            if app.state.readiness_probe:
+                return
             await asyncio.to_thread(audit.recover)
+            await app.state.scheduler.recover()
             await run_state.restore()
             snapshot = (await run_state.get()).model_dump(mode="json")
             if snapshot["status"] != "idle":
                 await asyncio.to_thread(audit.record_run, snapshot, None)
             app.state.audit_sync_task = asyncio.create_task(audit.sync_loop())
+            app.state.notification_sync_task = asyncio.create_task(app.state.notifications.sync_loop())
+            app.state.device_presence.start()
+            app.state.scheduler.start()
 
     @app.on_event("shutdown")
     async def shutdown_resources() -> None:
+        if task := getattr(app.state, "notification_sync_task", None):
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
+        if task := getattr(app.state, "desktop_parent_task", None):
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
+        if app.state.scheduler:
+            await app.state.scheduler.close()
+        await app.state.release_publisher.close()
+        await app.state.releases.close()
         if task := getattr(app.state, "audit_sync_task", None):
             task.cancel()
             with suppress(asyncio.CancelledError):
@@ -111,6 +150,12 @@ def create_app() -> FastAPI:
         if (await run_state.get()).status in {"running", "stopping"}:
             await app.state.automation.stop()
         await preview_browser.close()
+        if app.state.device_presence:
+            try:
+                await app.state.device_presence.close()
+                await asyncio.to_thread(audit.sync)
+            except (OSError, RuntimeError, sqlite3.Error):
+                logger.warning("O encerramento do aplicativo aguarda sincronização dos registros locais.")
         if store:
             await asyncio.to_thread(store.close)
 

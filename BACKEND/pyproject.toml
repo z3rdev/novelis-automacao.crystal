@@ -17,6 +17,7 @@ dependencies = [
   "numpy>=1.26.0",
   "pytesseract>=0.3.13",
   "psutil>=6.0.0",
+  "boto3>=1.40,<2",
 ]
 
 [project.optional-dependencies]

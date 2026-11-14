@@ -16,14 +16,26 @@ $IconPath = Join-Path $Root "FRONTEND\src\assets\icon.desktop.ico"
 $CurrentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
 
 if ((Test-Path -LiteralPath (Join-Path $Root 'novelis-cargo-hub.exe')) -and (Test-Path -LiteralPath $PythonwExe)) {
-  # Per-user startup works without administrative task registration.
+  # Migrate the legacy Python worker to the native tray application when startup was enabled.
   $RunKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
-  New-Item -Path $RunKey -Force | Out-Null
-  $Command = '"' + $PythonwExe + '" "' + $ServiceScript + '"'
-  New-ItemProperty -Path $RunKey -Name 'AutomacaoNovelisServico' -Value $Command -PropertyType String -Force | Out-Null
-  Remove-Item -LiteralPath (Join-Path $Root 'runtime\desktop-service.stop') -Force -ErrorAction SilentlyContinue
-  Start-Process -FilePath $PythonwExe -ArgumentList ('"' + $ServiceScript + '"') -WorkingDirectory $Root -WindowStyle Hidden
-  Write-Host 'Backend Cargo Hub configurado para iniciar na entrada desta conta Windows.'
+  $OldStartup = Get-ItemPropertyValue -LiteralPath $RunKey -Name 'AutomacaoNovelisServico' -ErrorAction SilentlyContinue
+  $NativeStartup = Get-ItemPropertyValue -LiteralPath $RunKey -Name 'Novelis Cargo Hub' -ErrorAction SilentlyContinue
+  $OldStartupEnabled = [bool]$OldStartup
+  $Approval = Get-ItemPropertyValue -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run' -Name 'AutomacaoNovelisServico' -ErrorAction SilentlyContinue
+  if ($Approval -and $Approval.Length -ge 8) {
+    # Respect a legacy startup disabled through Task Manager.
+    $OldStartupEnabled = $OldStartupEnabled -and -not ($Approval[($Approval.Length - 8)..($Approval.Length - 1)] | Where-Object { $_ -ne 0 })
+  }
+  if ($OldStartupEnabled -or $NativeStartup) {
+    New-Item -Path $RunKey -Force | Out-Null
+    $Command = '"' + (Join-Path $Root 'novelis-cargo-hub.exe') + '" --background'
+    New-ItemProperty -Path $RunKey -Name 'Novelis Cargo Hub' -Value $Command -PropertyType String -Force | Out-Null
+  }
+  Remove-ItemProperty -LiteralPath $RunKey -Name 'AutomacaoNovelisServico' -ErrorAction SilentlyContinue
+  Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+  Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
+  Set-Content -LiteralPath (Join-Path $Root 'runtime\desktop-service.stop') -Value 'stop' -Encoding UTF8
+  Write-Host 'Cargo Hub usa a bandeja e a opcao Iniciar com o Windows nas configuracoes do aplicativo.'
   exit 0
 }
 

@@ -8,10 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageBody, Section, TableBox } from "@/components/app/page";
-import { Pill, StagePill, type Tone } from "@/components/app/status";
-import { useApi, type DacteJob } from "@/services";
+import { Pill } from "@/components/app/status";
+import { RecentGenerations, jobKey, documentCheck as chk } from "@/components/app/recent-generations";
+import { useApi } from "@/services";
 import { desktop } from "@/services/desktop";
-import { fmtDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -25,8 +25,6 @@ export const Route = createFileRoute("/documentos")({
   component: Documentos,
 });
 
-const chk = (v?: string): [Tone, string] => (v === "ok" ? ["success", "OK"] : v === "falha" ? ["error", "Falha"] : ["warning", "Pendente"]);
-
 function Documentos() {
   const { api, mode, baseUrl } = useApi();
   const qc = useQueryClient();
@@ -34,16 +32,16 @@ function Documentos() {
   const jobs = useQuery({ queryKey: ["jobs", mode, baseUrl], queryFn: () => api.listDacteJobs(), refetchInterval: 1500, retry: 0 });
   const [metodo, setMetodo] = useState<"crystal" | "xml">("crystal");
   const [marcados, setMarcados] = useState<string[]>([]);
-  const [view, setView] = useState<DacteJob | null>(null);
+  const [viewId, setViewId] = useState<string | null>(null);
   const faltando = (ctes.data ?? []).filter((c) => c.pdf === "faltando");
   const gen = useMutation({ mutationFn: () => api.generateDacte(marcados, metodo), onSuccess: () => { toast.info(`Geração de ${marcados.length} DACTE(s) enviada — processamento sequencial`); setMarcados([]); qc.invalidateQueries(); }, onError: (e: Error) => toast.error(e.message) });
-  const cur = view ?? jobs.data?.find((j) => j.state === "concluida") ?? null;
+  const cur = jobs.data?.find((job, index) => jobKey(job, index) === viewId) ?? jobs.data?.find((j) => j.state === "concluida") ?? null;
   const cte = cur && ctes.data?.find((c) => c.id === cur.cte);
 
   return (
     <PageBody>
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,480px)]">
-        <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,480px)]">
+        <div className="min-w-0 space-y-4">
           <Section title={`PDFs faltantes (${faltando.length})`} actions={<Button size="sm" disabled={!marcados.length || gen.isPending} onClick={() => gen.mutate()}><Play />Gerar {marcados.length || ""} DACTE(s)</Button>}>
             <RadioGroup value={metodo} onValueChange={(v) => setMetodo(v as "crystal" | "xml")} className="mb-3 grid gap-2 sm:grid-cols-2">
               {[{ v: "crystal", i: Database, t: "Banco de dados + Crystal Reports", d: "Consulta SQL e relatório DACTE_v4.rpt. Método padrão." }, { v: "xml", i: FileCode2, t: "XML arquivado", d: "Monta o DACTE a partir do XML já salvo na pasta." }].map((o) => (
@@ -64,17 +62,7 @@ function Documentos() {
             </TableBox>
           </Section>
           <Section title="Gerações recentes">
-            <TableBox maxH="max-h-80">
-              <Table className="min-w-[640px]"><TableHeader><TableRow><TableHead>CT-e</TableHead><TableHead>Método</TableHead><TableHead>Situação</TableHead><TableHead>Etapa / erro</TableHead><TableHead>QR</TableHead><TableHead>Barras</TableHead><TableHead>Data</TableHead></TableRow></TableHeader>
-                <TableBody>{(jobs.data ?? []).map((j, i) => (
-                  <TableRow key={j.cte + i} className="cursor-pointer" onClick={() => setView(j)} data-state={cur === j ? "selected" : undefined}>
-                    <TableCell className="font-mono">{j.cte}</TableCell><TableCell>{j.metodo === "crystal" ? "Crystal" : "XML"}</TableCell><TableCell><StagePill s={j.state} /></TableCell>
-                    <TableCell className={cn("max-w-[200px] truncate", j.erro && "text-destructive")}>{j.erro ?? j.etapa}</TableCell>
-                    <TableCell><Pill tone={chk(j.qrCode)[0]}>{chk(j.qrCode)[1]}</Pill></TableCell><TableCell><Pill tone={chk(j.codigoBarras)[0]}>{chk(j.codigoBarras)[1]}</Pill></TableCell><TableCell className="whitespace-nowrap">{fmtDateTime(j.geradoEm)}</TableCell>
-                  </TableRow>
-                ))}</TableBody>
-              </Table>
-            </TableBox>
+            <RecentGenerations jobs={jobs.data ?? []} selected={cur} onSelect={(job, index) => setViewId(jobKey(job, index))} />
           </Section>
         </div>
         <Section title="Visualizador de DACTE" actions={cur?.pdfUrl && <Button size="sm" variant="outline" onClick={() => desktop.openPath(cur.pdfUrl!).catch((e: Error) => toast.error(e.message))}><FolderOpen />Abrir PDF</Button>}>

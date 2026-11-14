@@ -1,6 +1,8 @@
 import asyncio
 import json
 import re
+from copy import deepcopy
+from threading import Lock
 
 from app.api.routers.pendentes import _load_plan_rows
 from app.data.chamados_reader import read_chamados_payload
@@ -15,8 +17,21 @@ class HubService:
         self.settings, self.config, self.store = settings, config, store
         self.automation, self.event_bus = automation, event_bus
         self.audit = audit
+        self._files_lock = Lock()
+        self._files_revision = 0
+        self._files_rows = []
 
     def ctes(self):
+        revision = self._files_revision
+        with self._files_lock:
+            if revision != self._files_revision:
+                return deepcopy(self._files_rows)
+            rows = self._read_ctes()
+            self._files_rows = deepcopy(rows)
+            self._files_revision += 1
+            return rows
+
+    def _read_ctes(self):
         source = self.settings.backend_root.parent / "captures/pendentes/latest-python.json"
         if source.is_file():
             payload = json.loads(source.read_text(encoding="utf-8-sig"))
@@ -56,7 +71,7 @@ class HubService:
         events = await asyncio.to_thread(self.store.events, snapshot["id"])
         return run_view(snapshot, events)
 
-    async def start(self, flow: str, ctes: list[str], days: int, session_id: str | None = None):
+    async def start(self, flow: str, ctes: list[str], days: int, session_id: str | None = None, *, include_progress: bool = True):
         known = {"completo", "documentos", "somente_pdf", "somente_xml", "somente_chamados", "consulta"}
         if flow not in known:
             raise ValueError("Fluxo nao suportado.")
@@ -74,9 +89,11 @@ class HubService:
             raise ValueError("Sessao encerrada. Entre novamente com o nome do operador.")
         token = operator_session.set(session_id)
         try:
-            await self.automation.start(request)
+            snapshot = await self.automation.start(request)
         finally:
             operator_session.reset(token)
+        if not include_progress:
+            return snapshot.model_dump(mode="json")
         return await self.run()
 
     async def overview(self):
@@ -100,7 +117,9 @@ class HubService:
 
     def config_groups(self):
         labels = {"XML_SEFAZ_CERTIFICATE_CNPJ": "CNPJ do certificado (14 digitos)",
-                  "XML_SEFAZ_CERTIFICATE_THUMBPRINT": "Impressao digital (opcional, para desempate)"}
+                  "XML_SEFAZ_CERTIFICATE_THUMBPRINT": "Impressao digital (opcional, para desempate)",
+                  "NOVELIS_RELATORIO_CTE_XML_EXCEL_FILE": "Relatório Novelis compartilhado (Excel)",
+                  "NOVELIS_RELATORIO_CTE_XML_JSON_FILE": "Relatório Novelis compartilhado (JSON)"}
         groups = [{"id": "banco", "titulo": "Banco operacional SQLite", "fields": [
             {"key": "NOVELIS_SQLITE_PATH", "label": "Arquivo compartilhado", "value": str(self.store.path),
              "readOnly": True, "hint": "Backend local com transacoes coordenadas entre computadores"}]}]
@@ -109,7 +128,8 @@ class HubService:
                                         "value": str(self.audit.shared_path), "readOnly": True})
         for group, title, keys in [
             ("documentos", "Geracao de documentos", ["CRYSTAL_PDF_ENGINE", "CRYSTAL_QR_PROVIDER"]),
-            ("caminhos", "Pastas de documentos", ["RODOPAR_PDF_DOWNLOAD_TARGET_DIR", "XML_SEFAZ_DOWNLOAD_DIR"]),
+            ("caminhos", "Pastas e relatórios compartilhados", ["RODOPAR_PDF_DOWNLOAD_TARGET_DIR", "XML_SEFAZ_DOWNLOAD_DIR",
+                "NOVELIS_RELATORIO_CTE_XML_EXCEL_FILE", "NOVELIS_RELATORIO_CTE_XML_JSON_FILE"]),
             ("automacoes", "Automacao", ["PENDENTES_STOP_ON_ERROR"]),
             ("sefaz", "SEFAZ · certificado instalado no Windows", ["XML_SEFAZ_CERTIFICATE_CNPJ", "XML_SEFAZ_CERTIFICATE_THUMBPRINT"]),
         ]:

@@ -1,4 +1,6 @@
-from fastapi import Request
+import asyncio
+
+from fastapi import HTTPException, Request
 
 from app.config.settings import Settings
 from app.config.env_catalog import EnvCatalog
@@ -9,6 +11,15 @@ from app.services.automation_service import AutomationService
 from app.services.browser_driver import BrowserDriver
 from app.services.mapping_repository import MappingRepository
 from app.services.step_repository import StepRepository
+
+
+async def require_operator_session(request: Request) -> dict:
+    audit = request.app.state.session_audit
+    identifier = request.headers.get("X-Operator-Session")
+    session = await asyncio.to_thread(audit.session, identifier) if audit and identifier else None
+    if not session:
+        raise HTTPException(401, "Entre no Cargo Hub para continuar.")
+    return session
 
 
 def get_settings_from_app(request: Request) -> Settings:

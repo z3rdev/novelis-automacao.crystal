@@ -17,6 +17,10 @@ import { AppSidebar } from "@/components/app/app-sidebar";
 import { AppHeader } from "@/components/app/app-header";
 import { ApiProvider } from "@/services";
 import { SessionGate } from "@/components/app/session-gate";
+import { StartupScreen } from "@/components/app/startup-screen";
+import { UpdateProvider } from "@/components/app/update-provider";
+import { AppDialogs } from "@/components/app/app-dialogs";
+import { NotificationProvider } from "@/components/app/notification-provider";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
@@ -104,6 +108,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/favicon-32x32.png", type: "image/png", sizes: "32x32" },
+      { rel: "icon", href: "/favicon-16x16.png", type: "image/png", sizes: "16x16" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png", sizes: "180x180" },
     ],
   }),
   shellComponent: RootShell,
@@ -134,8 +141,9 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <ApiProvider>
+        <StartupScreen>
         <TooltipProvider delayDuration={200}>
-          <SessionGate><SidebarProvider>
+          <SessionGate><AppDialogs><NotificationProvider><UpdateProvider><SidebarProvider>
             <div className="flex min-h-screen w-full">
               <AppSidebar />
               <div className="flex min-w-0 flex-1 flex-col">
@@ -145,9 +153,10 @@ function RootComponent() {
                 </main>
               </div>
             </div>
-          </SidebarProvider></SessionGate>
+          </SidebarProvider></UpdateProvider></NotificationProvider></AppDialogs></SessionGate>
           <Toaster richColors position="bottom-right" />
         </TooltipProvider>
+        </StartupScreen>
       </ApiProvider>
     </QueryClientProvider>
   );
