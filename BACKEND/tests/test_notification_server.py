@@ -64,7 +64,8 @@ def test_publishing_uses_release_server_and_preserves_user_read_state(system):
     result = system.service.publish(NotificationInput(title="Aviso remoto", body="Comunicado para os operadores"), system.actor)
     assert "test/notifications/feed.json" in system.client.objects
     assert f"test/notifications/records/{result['id']}.json" in system.client.objects
-    assert system.service.list(system.actor["windows_user"])[0]["read_at"]
+    # Publishing is not a reading acknowledgement, including for the developer.
+    assert system.service.list(system.actor["windows_user"])[0]["read_at"] is None
     assert system.service.list("DOMAIN\\operator")[0]["read_at"] is None
     system.service.read(result["id"], "DOMAIN\\operator")
     read_at = system.service.list("DOMAIN\\operator")[0]["read_at"]

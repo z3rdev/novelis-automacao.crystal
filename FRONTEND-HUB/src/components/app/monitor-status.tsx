@@ -27,11 +27,11 @@ export function MonitorStatus({ value, muted = false }: { value: string; muted?:
         muted
           ? "border-border bg-muted text-muted-foreground"
           : ["running", "active"].includes(value)
-            ? "border-teal-500/25 bg-teal-500/10 text-teal-700"
+            ? "border-teal-500/25 bg-teal-500/10 text-info"
             : value === "broken"
               ? "border-destructive/20 bg-destructive/10 text-destructive"
               : ["stopping", "stale", "interrupted"].includes(value)
-                ? "border-amber-500/25 bg-amber-500/10 text-amber-700"
+                ? "border-amber-500/25 bg-amber-500/10 text-warning-foreground"
                 : "border-border bg-muted text-muted-foreground",
       )}
     >
@@ -46,7 +46,7 @@ export function DeviceConnection({ online }: { online: boolean }) {
     <span
       className={cn(
         "inline-flex items-center gap-1.5 whitespace-nowrap text-xs font-medium",
-        online ? "text-teal-700" : "text-muted-foreground",
+        online ? "text-info" : "text-muted-foreground",
       )}
     >
       <span className={cn("h-2 w-2 rounded-full", online ? "bg-teal-500" : "bg-slate-400")} />

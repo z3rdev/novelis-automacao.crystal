@@ -34,6 +34,9 @@ class OperationsStore:
                 CREATE TABLE IF NOT EXISTS execution_events (
                     id INTEGER PRIMARY KEY AUTOINCREMENT, run_id TEXT, payload TEXT NOT NULL);
                 CREATE INDEX IF NOT EXISTS ix_events_run ON execution_events(run_id, id);
+                CREATE INDEX IF NOT EXISTS ix_events_ticket_cte ON execution_events(
+                    coalesce(json_extract(payload,'$.payload.cte'),json_extract(payload,'$.payload.ticket.cte')))
+                    WHERE json_extract(payload,'$.kind')='novelis.save';
                 CREATE TABLE IF NOT EXISTS app_preferences (
                     name TEXT PRIMARY KEY, value TEXT NOT NULL);
                 PRAGMA user_version=1;
@@ -127,6 +130,29 @@ class OperationsStore:
                 params.append(run_id)
             rows = db.execute(sql + " ORDER BY id DESC LIMIT ?", (*params, min(limit, 1000))).fetchall()
         return [{**json.loads(value), "id": key} for key, value in reversed(rows)]
+
+    def workflow_events(self, run_id):
+        with self.connection() as db:
+            rows = db.execute("""SELECT id,payload FROM execution_events WHERE run_id=?
+                AND (json_extract(payload,'$.kind')='run.started'
+                     OR json_extract(payload,'$.kind') LIKE 'workflow.%') ORDER BY id""",
+                (run_id,)).fetchall()
+        return [{**json.loads(payload), "id": key} for key, payload in rows]
+
+    def confirmed_ticket_events(self, ctes: list[str]) -> list[dict]:
+        events = []
+        with self.connection() as db:
+            for offset in range(0, len(ctes), 400):
+                batch = ctes[offset:offset + 400]
+                marks = ",".join("?" for _ in batch)
+                rows = db.execute(
+                    "SELECT id,payload FROM execution_events WHERE json_extract(payload,'$.kind')='novelis.save' "
+                    "AND json_extract(payload,'$.payload.result.ok')=1 "
+                    "AND coalesce(json_extract(payload,'$.payload.cte'),json_extract(payload,'$.payload.ticket.cte')) "
+                    f"IN ({marks}) ORDER BY id", batch,
+                ).fetchall()
+                events.extend({**json.loads(value), "id": key} for key, value in rows)
+        return events
 
     def preferences(self, values: dict | None = None) -> dict:
         prefix = f"{self.machine_id}:"

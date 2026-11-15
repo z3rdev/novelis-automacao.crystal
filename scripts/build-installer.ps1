@@ -245,6 +245,7 @@ Invoke-Checked -FilePath powershell.exe -Arguments @('-NoProfile', '-ExecutionPo
   '-File', (Join-Path $Root 'scripts\build-hub-desktop.ps1'), '-NoBundle', '-Version', $Version)
 
 $Iscc = Get-InnoCompiler
+Invoke-Checked $PythonExe (Join-Path $Root 'scripts\build-installer-branding.py')
 $ReleaseInput = Join-Path $Root 'runtime\installer-inputs\release'
 New-Item -ItemType Directory -Force -Path $ReleaseInput | Out-Null
 $InstalledVersion = $Version

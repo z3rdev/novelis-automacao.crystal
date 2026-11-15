@@ -57,6 +57,11 @@ Compression=lzma2
 SolidCompression=yes
 #endif
 WizardStyle=modern
+WizardImageFile=..\runtime\installer-branding\wizard.bmp
+WizardSmallImageFile=..\runtime\installer-branding\wizard-small.bmp
+WizardImageBackColor=$0045250B
+WizardSizePercent=120,110
+DisableWelcomePage=no
 CloseApplications=yes
 RestartApplications=no
 UninstallDisplayIcon={app}\{#MyAppExeName}
@@ -67,6 +72,7 @@ SetupLogging=yes
 Name: "brazilianportuguese"; MessagesFile: "compiler:Languages\BrazilianPortuguese.isl"
 
 [Files]
+Source: "..\scripts\setup\stop-installed-stack.ps1"; Flags: dontcopy
 Source: ".\crystal\runtime-probe.ps1"; Flags: dontcopy
 Source: ".\crystal\inspect-runtime.ps1"; Flags: dontcopy
 Source: "..\scripts\install-crystal-runtime.ps1"; Flags: dontcopy
@@ -141,13 +147,13 @@ Type: filesandordirs; Name: "{app}\runtime\python312"
 var
   OldInstallRoot: String;
   OldVersion: String;
-  StackStopped: Boolean;
   EnvBackupLines: TStringList;
 
 #include "crystal\Prerequisite.iss"
 #include "backend\Preparation.iss"
 #include "backend\Hub.iss"
 #include "backend\OperationalConfiguration.iss"
+#include "branding\Theme.iss"
 
 function BootstrapArguments(Param: String): String;
 begin
@@ -310,33 +316,19 @@ begin
   );
 end;
 
-procedure StopAutomationStack;
+function StopInstallationProcesses(Dir: String): Boolean;
+var
+  ResultCode: Integer;
 begin
-  RunPowerShell(
-    '$ErrorActionPreference=""SilentlyContinue""; ' +
-    'schtasks /End /TN AutomacaoNovelisServico | Out-Null; ' +
-    'schtasks /Delete /TN AutomacaoNovelisServico /F | Out-Null; ' +
-    'Get-Process | Where-Object { ($_.ProcessName -like ""AutomacaoNovelis*"" -or $_.ProcessName -eq ""novelis-cargo-hub"") -and $_.ProcessName -notlike ""*Setup*"" } | Stop-Process -Force; ' +
-    'Get-CimInstance Win32_Process | Where-Object { $_.Name -eq ""powershell.exe"" -and $_.CommandLine -like ""*Automacao Novelis*"" -and $_.CommandLine -match ""(bootstrap|run-dev|repair-backend)[.]ps1"" } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }; ' +
-    'Get-CimInstance Win32_Process | Where-Object { ($_.Name -in @(""python.exe"",""pythonw.exe"",""node.exe"")) -and ($_.CommandLine -like ""*Automacao Novelis*"") } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }; ' +
-    'foreach ($port in 8000,5173) { ' +
-    '  Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort $port -State Listen | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }; ' +
-    '}'
-  );
-end;
-
-procedure EnsureAutomationStackStopped;
-begin
-  if StackStopped then
-    Exit;
-  StopAutomationStack;
-  StackStopped := True;
-end;
-
-function InitializeSetup: Boolean;
-begin
-  EnsureAutomationStackStopped;
   Result := True;
+  if not IsAutomacaoInstallDir(Dir) then Exit;
+  ExtractTemporaryFile('stop-installed-stack.ps1');
+  Result := Exec('powershell.exe',
+    '-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "' +
+    ExpandConstant('{tmp}\stop-installed-stack.ps1') + '" -InstallRoot "' + Dir + '"',
+    '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Result := Result and (ResultCode = 0);
+  Log('Owned Cargo Hub process shutdown completed: ' + IntToStr(ResultCode));
 end;
 
 procedure CleanCurrentInstallDir(Dir: String);
@@ -401,10 +393,21 @@ function PrepareToInstall(var NeedsRestart: Boolean): String;
 var
   NewDir: String;
 begin
+  Result := '';
+  NewDir := ExpandConstant('{app}');
+  if not StopInstallationProcesses(NewDir) then
+  begin
+    Result := 'Nao foi possivel encerrar os processos desta instalacao. Feche o Cargo Hub e tente novamente.';
+    Exit;
+  end;
+  if (OldInstallRoot <> '') and (NormalizePath(OldInstallRoot) <> NormalizePath(NewDir)) then
+    if not StopInstallationProcesses(OldInstallRoot) then
+    begin
+      Result := 'Nao foi possivel encerrar a instalacao anterior do Cargo Hub.';
+      Exit;
+    end;
   Result := EnsureCrystalRuntime(NeedsRestart);
   if Result <> '' then Exit;
-  NewDir := ExpandConstant('{app}');
-  EnsureAutomationStackStopped;
   BackupExistingEnv(NewDir);
   if (EnvBackupLines = nil) and (OldInstallRoot <> '') then
     BackupExistingEnv(OldInstallRoot);

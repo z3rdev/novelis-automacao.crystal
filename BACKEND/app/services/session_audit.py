@@ -10,6 +10,7 @@ from threading import RLock
 from uuid import uuid4
 
 from app.infrastructure.session_audit_db import apply, connection, enqueue
+from app.services.device_classification import classify_computer_name
 from app.services.device_identity import device_identity
 
 operator_session = ContextVar("operator_session", default=None)
@@ -31,6 +32,7 @@ class SessionAudit:
 
     def login(self, name: str, snapshot: dict) -> dict:
         identity, timestamp = self.identity(), now()
+        name = identity["windows_user"].rsplit("\\", 1)[-1]
         session = {"id": str(uuid4()), "machine_id": identity["computer_name"].casefold(),
                    "operator_name": name, **identity, "mac_addresses": json.dumps(identity["mac_addresses"]),
                    "login_at": timestamp, "last_seen_at": timestamp, "logout_at": None,
@@ -50,6 +52,7 @@ class SessionAudit:
                 value.update(last_seen_at=now(), updated_at=now())
                 enqueue(db, {"sessions": [value]})
             value["mac_addresses"] = json.loads(value["mac_addresses"])
+            value["classification"] = classify_computer_name(value["computer_name"])
             return value
 
     def logout(self, identifier: str) -> None:

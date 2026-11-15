@@ -51,6 +51,12 @@ class PdfXmlParallelRunner:
     ) -> dict[str, Any]:
         run_pdf = not config.get("skipPdf")
         run_xml = not config.get("skipXml")
+        if "faltandoPdf" in plan and "faltandoXml" in plan and not plan["faltandoPdf"] and not plan["faltandoXml"]:
+            if run_pdf:
+                await self.run_pdf(browser, rodopar_config, plan, request, run_id, config)
+            if run_xml:
+                await self.run_xml_sefaz(browser, xml_config, plan, request, run_id, config, plan_file)
+            return plan
         if run_pdf and run_xml:
             return await self._run_parallel(
                 browser,

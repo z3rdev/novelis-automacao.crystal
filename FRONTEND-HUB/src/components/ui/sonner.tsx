@@ -1,10 +1,13 @@
 import { Toaster as Sonner } from "sonner";
+import { useAppearance } from "@/services/appearance-context";
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
 const Toaster = ({ ...props }: ToasterProps) => {
+  const { resolved } = useAppearance();
   return (
     <Sonner
+      theme={resolved}
       className="toaster group"
       toastOptions={{
         classNames: {

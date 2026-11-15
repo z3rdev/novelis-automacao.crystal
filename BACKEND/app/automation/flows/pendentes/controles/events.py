@@ -22,13 +22,15 @@ async def emit_plan_summary(emit: Emit, plan: dict[str, Any], run_id: str, label
         run_id,
         "pendentes.plan",
         (
-            f"{label}: total={plan['total']} | "
+            f"Arquivos — {label}: total={plan['total']} | "
             f"faltando_pdf={len(plan['faltandoPdf'])} | "
             f"faltando_xml={len(plan['faltandoXml'])} | "
             f"faltando_comprovante={len(plan['faltandoComprovante'])} | "
             f"prontos={len(plan['prontosChamado'])}."
         ),
         {
+            "querySource": "arquivos",
+            "total": plan["total"],
             "sourceFile": plan["sourceFile"],
             "sheetName": plan["sheetName"],
             "faltandoPdf": plan["faltandoPdf"],

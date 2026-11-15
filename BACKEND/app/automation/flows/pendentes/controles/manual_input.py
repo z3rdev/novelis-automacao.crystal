@@ -98,6 +98,7 @@ class ManualInputResolver:
             int(db_config.get("connectionTimeoutMs") or 15_000)
             + int(db_config.get("requestTimeoutMs") or 20_000)
         ) / 1000 + 10
+        await emit_step(self.emit, run_id, "pendentes.manual_sql_refresh", "SQL Server: consultando as chaves dos CT-es informados manualmente.", {"querySource": "sql"})
         try:
             result = await asyncio.wait_for(
                 run_blocking(fetch_rows_by_documents, db_config, missing),

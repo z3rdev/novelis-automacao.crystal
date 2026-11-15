@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { UserRound, LogOut, Loader2, RefreshCw, ArrowRight } from "lucide-react";
 import { useApi, type OperatorSession, type SessionState } from "@/services";
@@ -9,6 +9,8 @@ import { toast } from "sonner";
 import { BrandMark, BrandName } from "./brand";
 import { DeviceCard } from "./device-card";
 import { DeveloperCredit } from "./developer-credit";
+import { desktop } from "@/services/desktop";
+import { AppearanceMenu } from "./appearance-menu";
 
 const SessionContext = createContext<{ session: OperatorSession | null; logout: () => void }>({
   session: null,
@@ -24,14 +26,27 @@ export function SessionGate({ children }: { children: ReactNode }) {
     queryKey: key,
     queryFn: () => api.getSession(),
     enabled: mode === "local",
-    refetchInterval: 15000,
+    refetchInterval: (value) =>
+      value.state.status === "error" || !value.state.data
+        ? 3000
+        : value.state.data.session
+          ? 15000
+          : 8000,
+    refetchIntervalInBackground: true,
+    refetchOnWindowFocus: "always",
+    networkMode: "always",
     retry: 0,
   });
-  const [name, setName] = useState("");
-  useEffect(() => {
-    if (query.data?.identity.windows_user)
-      setName((previous) => previous || query.data.identity.windows_user.split("\\").pop() || "");
-  }, [query.data?.identity.windows_user]);
+  const nativeIdentity = useQuery({
+    queryKey: ["native-device-identity"],
+    queryFn: () => desktop.deviceIdentity(),
+    enabled: mode === "local" && desktop.isDesktop,
+    staleTime: Infinity,
+    retry: 1,
+  });
+  const identity = query.data?.identity ?? nativeIdentity.data ?? undefined;
+  const backendReady = Boolean(query.data?.identity) && !query.isError;
+  const name = identity?.windows_user.split("\\").pop() || "";
   const login = useMutation({
     mutationFn: () => api.login(name.trim()),
     onSuccess: (data) => {
@@ -63,29 +78,37 @@ export function SessionGate({ children }: { children: ReactNode }) {
         {children}
       </SessionContext.Provider>
     );
-  const identity = query.data?.identity;
   return (
     <div className="login-layout">
       <aside className="login-device-panel">
-        <div className="relative flex items-center gap-3"><BrandMark tone="white" className="h-14 w-14" /><BrandName className="text-3xl" /></div>
+        <div className="relative flex items-center gap-3">
+          <BrandMark tone="white" className="h-14 w-14" />
+          <BrandName className="text-3xl" />
+        </div>
         <DeviceCard identity={identity} />
       </aside>
       <main className="login-form-panel">
+        <div className="absolute right-5 top-5">
+          <AppearanceMenu />
+        </div>
         <div className="w-full max-w-sm space-y-8">
           <div>
             <div className="mb-10 flex items-center gap-3 lg:hidden">
-              <BrandMark className="h-12 w-12" /><BrandName className="text-2xl" />
+              <BrandMark className="h-12 w-12" />
+              <BrandName className="text-2xl" />
             </div>
-            <h2 className="text-3xl font-semibold tracking-tight text-primary">Entrar no Cargo Hub</h2>
+            <h2 className="text-3xl font-semibold tracking-tight text-primary">
+              Entrar no Cargo Hub
+            </h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              Informe seu nome para identificar esta sessão de trabalho.
+              Entre com a conta Windows deste computador.
             </p>
           </div>
           <form
             className="space-y-5"
             onSubmit={(event) => {
               event.preventDefault();
-              login.mutate();
+              if (backendReady && name.trim().length >= 2 && !login.isPending) login.mutate();
             }}
           >
             <div className="space-y-2">
@@ -93,29 +116,48 @@ export function SessionGate({ children }: { children: ReactNode }) {
               <Input
                 id="operator-name"
                 className="h-12 rounded-lg text-base"
-                autoComplete="name"
-                autoFocus
+                autoComplete="username"
+                readOnly
                 maxLength={100}
                 value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder="Seu nome"
+                placeholder="Identificando conta Windows…"
               />
             </div>
             <DeviceCard identity={identity} className="lg:hidden" />
-            {query.isError && (
-              <div role="alert" className="space-y-3 rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive">
-                <p>{(query.error as Error).message}</p>
-                <Button variant="outline" size="sm" type="button" onClick={() => query.refetch()} disabled={query.isFetching}><RefreshCw className={query.isFetching ? "animate-spin" : ""} />Tentar novamente</Button>
+            {!backendReady && (
+              <div
+                role="status"
+                aria-live="polite"
+                className="flex items-start gap-3 rounded-lg border border-primary/10 bg-primary/5 p-4 text-sm"
+              >
+                <RefreshCw className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-teal-600" />
+                <div>
+                  <p className="font-medium">
+                    {query.isError
+                      ? query.isFetching
+                        ? "Tentando conectar novamente…"
+                        : "Aguardando o backend local"
+                      : "Conectando ao Cargo Hub…"}
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                    Reconexão automática.
+                  </p>
+                </div>
               </div>
             )}
             <Button
               className="h-12 w-full rounded-lg text-base"
               size="lg"
               type="submit"
-              disabled={!identity || name.trim().length < 2 || login.isPending}
+              disabled={!backendReady || name.trim().length < 2 || login.isPending}
             >
-              {login.isPending ? <Loader2 className="animate-spin" /> : <UserRound />}
-              Entrar no Cargo Hub<ArrowRight className="ml-auto" />
+              {login.isPending || !backendReady ? (
+                <Loader2 className="animate-spin" />
+              ) : (
+                <UserRound />
+              )}
+              {backendReady ? "Entrar no Cargo Hub" : "Aguardando conexão…"}
+              <ArrowRight className="ml-auto" />
             </Button>
           </form>
           <button

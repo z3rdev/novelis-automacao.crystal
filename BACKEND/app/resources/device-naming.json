@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "sector": [
+    {"code": "GDF", "label": "Gestão de frota", "aliases": ["GDF", "GRF"]},
+    {"code": "TI", "label": "Tecnologia da informação", "aliases": ["TI"]},
+    {"code": "COM", "label": "Comercial", "aliases": ["COM", "COMERCIAL"]},
+    {"code": "COMP", "label": "Compras", "aliases": ["COMP", "COMPRAS"]},
+    {"code": "MAN", "label": "Manutenção", "aliases": ["MAN", "MANUTENCAO"]},
+    {"code": "ABAST", "label": "Abastecimento", "aliases": ["ABAST", "ABASTECIMENTO"]},
+    {"code": "FVN", "label": "Filial Viana", "aliases": ["FVN"]},
+    {"code": "CORD", "label": "Coordenação", "aliases": ["CORD"]},
+    {"code": "ACC", "label": "Acerto de contas", "aliases": ["ACC"]},
+    {"code": "OCR", "label": "Ocorrência", "aliases": ["OCR", "OCORRENCIA"]},
+    {"code": "OPE", "label": "Operação", "aliases": ["OPE", "OPR", "OPERACAO"]},
+    {"code": "RH", "label": "Recursos humanos", "aliases": ["RH"]},
+    {"code": "MKT", "label": "Marketing", "aliases": ["MKT", "MARKETING"]},
+    {"code": "QUA", "label": "Qualidade", "aliases": ["QUA", "QUALIDDADE", "QUALIDADE"]},
+    {"code": "EXP", "label": "Expedição", "aliases": ["EXP", "EXPEDICAO"]},
+    {"code": "DHO", "label": "Desenvolvimento humano e organizacional", "aliases": ["DHO"]},
+    {"code": "FIN", "label": "Financeiro", "aliases": ["FIN", "FINANCEIRO"]},
+    {"code": "JUR", "label": "Jurídico", "aliases": ["JUR", "JURIDICO"]},
+    {"code": "MON", "label": "Monitoramento", "aliases": ["MON", "MONITORAMENTO"]},
+    {"code": "SESMT", "label": "Segurança do trabalho", "aliases": ["SESMT"]},
+    {"code": "NUC", "label": "Núcleo de auditoria", "aliases": ["NUC"]},
+    {"code": "ALM", "label": "Almoxarifado", "aliases": ["ALM", "ALMOXARIFADO"]}
+  ],
+  "station_type": [
+    {"code": "NB", "label": "Notebook", "aliases": ["NB"]},
+    {"code": "WKS", "label": "Workstation", "aliases": ["WKS"]}
+  ],
+  "branch": [
+    {"code": "VIN", "label": "Viana", "aliases": ["VIN"]},
+    {"code": "PINDA", "label": "Pindamonhangaba", "aliases": ["PINDA"]},
+    {"code": "PIR", "label": "Piracicaba", "aliases": ["PIRACICABA", "PIR"]},
+    {"code": "RJ", "label": "Rio de Janeiro", "aliases": ["RJ"]},
+    {"code": "PERNAMBUCO", "label": "Pernambuco", "aliases": ["PERNAMBUCO"]},
+    {"code": "PGR", "label": "Ponta Grossa", "aliases": ["PGR"]}
+  ]
+}

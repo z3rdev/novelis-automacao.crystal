@@ -8,12 +8,18 @@ from app.automation.flows.novelis_chamados.steps.novelis import NovelisFlow
 from app.domain.models import RunStartRequest
 from app.infrastructure.json_store import read_json, write_json
 from app.services.browser_driver import BrowserDriver
+from app.data.cte_fields import enrich
+from app.services.tariffs.audit import message_fields
+from app.automation.cancellation import run_blocking
+from app.infrastructure.pending_queue import identity
 
 
 class ChamadoNovelisFlow:
-    def __init__(self, cwd: Path, emit: Emit) -> None:
+    def __init__(self, cwd: Path, emit: Emit, tariff_audit=None, http_session=None) -> None:
         self.cwd = cwd
         self.emit = emit
+        self.tariff_audit = tariff_audit
+        self.http_session = http_session
 
     async def run(
         self,
@@ -32,6 +38,12 @@ class ChamadoNovelisFlow:
             )
             return []
 
+        audit = row.get("tariffAudit")
+        if self.tariff_audit is not None:
+            audit = (await run_blocking(self.tariff_audit.rows,[row])).get(identity(row))
+        row = message_fields(row,audit)
+        if audit and audit.get("status") != "conferido":
+            await emit_warn(self.emit,run_id,"chamado_novelis.tarifa_alerta","Conferência tarifária com alertas; abertura permitida conforme configuração.",{"cte":row["cte"],"status":audit["status"],"alertas":audit["alertas"]})
         output_file = self._write_temp_tarifario(config, row)
         flow_config = {
             **config,
@@ -50,7 +62,7 @@ class ChamadoNovelisFlow:
             f"Chamado Novelis preparado para CTE {row['numeroCte']}.",
             {"row": row, "tarifarioOutputFile": str(output_file)},
         )
-        result = await NovelisFlow(self.cwd, self.emit).run(browser, flow_config, request, run_id)
+        result = await NovelisFlow(self.cwd, self.emit, self.http_session).run(None, flow_config, request, run_id)
         return result or [row]
 
     def _resolve_row(
@@ -64,7 +76,7 @@ class ChamadoNovelisFlow:
             return None
         from_sources = self._lookup_sources(config, target)
         return {
-            **from_sources,
+            **enrich(from_sources),
             **target,
             "numeroCte": target["cte"],
             "rota": from_sources.get("rota") or self._route(from_sources),

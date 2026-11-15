@@ -4,6 +4,19 @@ import { createHttpApi } from "./http";
 afterEach(() => { vi.unstubAllGlobals(); sessionStorage.clear(); });
 
 describe("adaptador do backend central", () => {
+  it("baixa o Excel com a sessão do operador e devolve um Blob", async () => {
+    sessionStorage.setItem("novelis.operator-session:http://server/api/hub", "report-session");
+    const fetcher = vi.fn().mockResolvedValue(new Response("xlsx-test", { status: 200 }));
+    vi.stubGlobal("fetch", fetcher);
+    const file = await createHttpApi("http://server/api/hub/").downloadExecutionReport("run-id");
+    expect(file.size).toBe(9);
+    expect(fetcher.mock.calls[0]![0]).toBe("http://server/api/hub/execution-reports/run-id/file");
+    expect(fetcher.mock.calls[0]![1].headers["X-Operator-Session"]).toBe("report-session");
+  });
+  it("não entrega como Excel uma resposta de autenticação recusada", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}", { status: 401 })));
+    await expect(createHttpApi("http://server/api/hub").downloadExecutionReport("run-id")).rejects.toThrow("Não foi possível baixar o Excel");
+  });
   it("repete uma leitura quando ocorre timeout e recupera os dados", async () => {
     const fetcher = vi.fn().mockRejectedValueOnce(new DOMException("signal timed out", "TimeoutError"))
       .mockResolvedValueOnce(new Response(JSON.stringify({ naFila: 8 }), { status: 200 }));
@@ -51,6 +64,14 @@ describe("adaptador do backend central", () => {
     const [url, init] = fetcher.mock.calls[0]!;
     expect(url).toBe("http://server/api/hub/runs");
     expect(JSON.parse(init.body)).toEqual({ flow: "somente_pdf", ctes: ["2-10-10402", "11-10-397"] });
+  });
+
+  it("envia a opção HTTP de teste pela API de execuções", async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response("{}", { status: 200 }));
+    vi.stubGlobal("fetch", fetcher);
+    const request = { flow: "somente_chamados" as const, ctes: ["8-10-1559"], chamadoHttp: true };
+    await createHttpApi("http://server/api/hub").startRun(request);
+    expect(JSON.parse(fetcher.mock.calls[0]![1].body)).toEqual(request);
   });
 
   it("propaga falha real sem trocar para dados de demonstracao", async () => {

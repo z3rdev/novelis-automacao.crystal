@@ -16,10 +16,21 @@ $python = Join-Path $projectRoot 'BACKEND\.venv\Scripts\python.exe'
 $reportDir = Join-Path $projectRoot 'runtime\installation'
 New-Item -ItemType Directory -Path $reportDir -Force | Out-Null
 if (!(Test-Path -LiteralPath $python)) {
-    @{status='pending';message='Python do backend ausente. Execute bootstrap.ps1.'} |
-        ConvertTo-Json | Set-Content -LiteralPath (Join-Path $reportDir 'dacte-diagnostic.json') -Encoding UTF8
-    '<!doctype html><meta charset="utf-8"><h1>Diagnostico DACTE pendente</h1><p>Python do backend ausente. Execute scripts/bootstrap.ps1 e repita a preparacao.</p>' |
-        Set-Content -LiteralPath (Join-Path $reportDir 'dacte-diagnostic.html') -Encoding UTF8
+    $failureData = @{schema_version=1;status='pending';dependencies_ready=$false;production_ready=$false;
+        checked_at=[DateTime]::UtcNow.ToString('o');message='Python do backend ausente. Execute bootstrap.ps1.'} | ConvertTo-Json
+    Set-Content -LiteralPath (Join-Path $reportDir 'dacte-diagnostic.json') -Value $failureData -Encoding UTF8
+    $diagnosticAssets = Join-Path $projectRoot 'BACKEND\app\services\crystal_reports\diagnostic_assets'
+    $fallbackTemplate = Join-Path $diagnosticAssets 'bootstrap.html'
+    if (Test-Path -LiteralPath $fallbackTemplate) {
+        $fallbackStyle = Get-Content -LiteralPath (Join-Path $diagnosticAssets 'report.css') -Raw -Encoding UTF8
+        $fallbackScript = Get-Content -LiteralPath (Join-Path $diagnosticAssets 'report.js') -Raw -Encoding UTF8
+        $fallbackHtml = (Get-Content -LiteralPath $fallbackTemplate -Raw -Encoding UTF8).
+            Replace('__STYLE__', $fallbackStyle).Replace('__SCRIPT__', $fallbackScript).
+            Replace('__DATA__', [System.Net.WebUtility]::HtmlEncode($failureData))
+    } else {
+        $fallbackHtml = '<!doctype html><meta charset="utf-8"><h1>Diagnostico DACTE pendente</h1><p>Python do backend ausente. Execute scripts/bootstrap.ps1 e repita a preparacao.</p>'
+    }
+    Set-Content -LiteralPath (Join-Path $reportDir 'dacte-diagnostic.html') -Value $fallbackHtml -Encoding UTF8
     exit 2
 }
 $arguments = @('-m', 'app.tools.dacte_setup')

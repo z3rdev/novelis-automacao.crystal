@@ -6,6 +6,14 @@ import pytest
 from app.data.consulta_db import fetch_last_5_days_rows, fetch_rows_by_documents
 
 
+def test_rodcon_observation_lookup_uses_the_full_document_identity():
+    from app.data.consulta_db import SQL_LAST_N_DAYS,SQL_BY_DOCUMENT
+    for query in (SQL_LAST_N_DAYS,SQL_BY_DOCUMENT):
+        assert "RC.CODFIL = R.FILIAL" in query
+        assert "RC.SERCON = R.SERIE" in query
+        assert "RC.CODCON = R.DOCUMENTO" in query
+
+
 @pytest.mark.parametrize("fail_stage", ["execute", "fetchall"])
 def test_daily_query_reopens_connection_once_after_killed_session(monkeypatch, fail_stage):
     state = _daily_connections(monkeypatch, failures=1, fail_stage=fail_stage)
@@ -37,6 +45,16 @@ def test_periods_include_today_and_preserve_zero_for_current_day(monkeypatch, da
     assert state.parameters == [(offset, None, None)]
 
 
+def test_custom_period_passes_both_dates_as_sql_parameters(monkeypatch):
+    from datetime import date, timedelta
+    state = _daily_connections(monkeypatch, failures=0)
+    start, end = date.today() - timedelta(days=8), date.today() - timedelta(days=2)
+    fetch_last_5_days_rows({"server": "sql", "user": "usr", "pass": "pwd"}, 0, start, end)
+    assert state.parameters == [(start.strftime("%Y%m%d"), end.strftime("%Y%m%d"), None, None)]
+    assert "DATEADD" not in state.query
+    assert "BETWEEN CONVERT(date, ?, 112) AND CONVERT(date, ?, 112)" in state.query
+
+
 def _daily_connections(monkeypatch, failures, fail_stage="execute", error="Session in kill state (596)"):
     state = SimpleNamespace(connections=0, closed=0, parameters=[])
 
@@ -50,6 +68,7 @@ def _daily_connections(monkeypatch, failures, fail_stage="execute", error="Sessi
             return self
 
         def execute(self, _query, *parameters):
+            state.query = _query
             state.parameters.append(parameters)
             if fail_stage == "execute" and self.number <= failures:
                 raise RuntimeError(error)

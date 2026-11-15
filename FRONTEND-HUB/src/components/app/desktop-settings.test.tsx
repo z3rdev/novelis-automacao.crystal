@@ -5,7 +5,15 @@ import { desktop } from "@/services/desktop";
 import { DesktopSettings } from "./desktop-settings";
 
 vi.mock("@/services/desktop", () => ({
-  desktop: { isDesktop: true, startupEnabled: vi.fn(), setStartup: vi.fn(), hideToTray: vi.fn() },
+  desktop: {
+    isDesktop: true,
+    startupEnabled: vi.fn(),
+    setStartup: vi.fn(),
+    hideToTray: vi.fn(),
+    widgetEnabled: vi.fn(),
+    setWidgetEnabled: vi.fn(),
+    showStatusWidget: vi.fn(),
+  },
 }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 beforeEach(() => {
@@ -13,6 +21,9 @@ beforeEach(() => {
   vi.mocked(desktop.startupEnabled).mockResolvedValue(false);
   vi.mocked(desktop.setStartup).mockImplementation(async (value) => value);
   vi.mocked(desktop.hideToTray).mockResolvedValue(undefined);
+  vi.mocked(desktop.widgetEnabled).mockResolvedValue(true);
+  vi.mocked(desktop.setWidgetEnabled).mockImplementation(async (value) => value);
+  vi.mocked(desktop.showStatusWidget).mockResolvedValue(undefined);
   vi.stubGlobal(
     "ResizeObserver",
     class {
@@ -59,5 +70,14 @@ describe("preferências do aplicativo nativo", () => {
     show();
     expect(screen.queryByRole("switch")).toBeNull();
     expect(desktop.startupEnabled).not.toHaveBeenCalled();
+  });
+  it("permite desligar o widget e abrir sua visualização", async () => {
+    show();
+    const toggle = screen.getByRole("switch", { name: "Widget de agendamentos em segundo plano" });
+    await waitFor(() => expect(toggle).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "Ver widget" }));
+    await waitFor(() => expect(desktop.showStatusWidget).toHaveBeenCalledOnce());
+    fireEvent.click(toggle);
+    await waitFor(() => expect(desktop.setWidgetEnabled).toHaveBeenCalledWith(false));
   });
 });

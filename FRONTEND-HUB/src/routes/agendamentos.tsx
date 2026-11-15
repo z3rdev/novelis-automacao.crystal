@@ -1,20 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { CalendarClock, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useApi, type AutomationSchedule, type ScheduleInput } from "@/services";
-import { PageBody, Section } from "@/components/app/page";
+import { PageBody } from "@/components/app/page";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,31 +16,23 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  ScheduleForm,
-  emptySchedule,
-  scheduleFlows,
-  weekdayNames,
-} from "@/components/app/schedule-form";
-import { fmtDateTime } from "@/lib/format";
+import { ScheduleForm } from "@/components/app/schedule-form";
+import { emptySchedule, scheduleDraft } from "@/services/schedule-options";
+import { isBusy, useRun } from "@/components/app/run-panel";
+import { FluentIcon } from "@/components/app/fluent-icon";
+import { ScheduleList } from "@/components/app/schedules/schedule-list";
+import { ScheduleHistory } from "@/components/app/schedules/schedule-history";
+import "@/components/app/schedules/schedules.css";
 
 export const Route = createFileRoute("/agendamentos")({
   head: () => ({ meta: [{ title: "Agendamentos · Cargo Hub" }] }),
   component: Schedules,
 });
 
-const runLabels: Record<string, string> = {
-  starting: "Iniciando",
-  running: "Em execução",
-  completed: "Concluído",
-  failed: "Falhou",
-  cancelled: "Cancelado",
-  interrupted: "Interrompido",
-};
-
-function Schedules() {
+export function Schedules() {
   const { api, mode, baseUrl } = useApi();
   const qc = useQueryClient();
+  const run = useRun();
   const key = ["schedules", mode, baseUrl];
   const query = useQuery({
     queryKey: key,
@@ -60,13 +43,27 @@ function Schedules() {
   const [form, setForm] = useState<ScheduleInput | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [removing, setRemoving] = useState<AutomationSchedule | null>(null);
+  const [history, setHistory] = useState<AutomationSchedule | null>(null);
+  const [notice, setNotice] = useState(true);
+  const closeForm = () => {
+    setForm(null);
+    setEditing(null);
+  };
   const refresh = () => void qc.invalidateQueries({ queryKey: key });
   const error = (value: Error) => toast.error(value.message);
+  const start = useMutation({
+    mutationFn: (value: AutomationSchedule) => api.runSchedule(value.id),
+    onSuccess: (value) => {
+      qc.setQueryData(["run", mode, baseUrl], value);
+      refresh();
+      toast.success("Rotina iniciada. Acompanhe em Monitor ao vivo.");
+    },
+    onError: error,
+  });
   const save = useMutation({
     mutationFn: () => (editing ? api.updateSchedule(editing, form!) : api.createSchedule(form!)),
     onSuccess: () => {
-      setForm(null);
-      setEditing(null);
+      closeForm();
       refresh();
       toast.success("Agendamento salvo.");
     },
@@ -74,7 +71,7 @@ function Schedules() {
   });
   const toggle = useMutation({
     mutationFn: (value: AutomationSchedule) =>
-      api.updateSchedule(value.id, { ...value, enabled: !value.enabled }),
+      api.updateSchedule(value.id, { ...scheduleDraft(value), enabled: !value.enabled }),
     onSuccess: refresh,
     onError: error,
   });
@@ -82,16 +79,35 @@ function Schedules() {
     mutationFn: (id: string) => api.removeSchedule(id),
     onSuccess: () => {
       refresh();
+      if (removing?.id === editing) closeForm();
       setRemoving(null);
       toast.success("Agendamento removido.");
     },
     onError: error,
   });
+  const values = query.data?.schedules ?? [];
   return (
-    <PageBody>
-      <Section
-        title="Agendamentos automáticos"
-        actions={
+    <PageBody className={`schedules-page${form ? " schedule-edit-page" : ""}`}>
+      <header className="schedules-heading">
+        <div>
+          {form && (
+            <button
+              className="mb-3 text-xs text-muted-foreground hover:text-foreground"
+              onClick={closeForm}
+            >
+              ← Agendamentos
+            </button>
+          )}
+          <h1>{form ? (editing ? "Editar rotina" : "Novo agendamento") : "Agendamentos"}</h1>
+          {!form && (
+            <p>
+              Rotinas que rodam sozinhas neste computador (
+              <strong className="text-foreground">{query.data?.device ?? "…"}</strong>).{" "}
+              {values.filter((value) => value.enabled).length} de {values.length} ativas.
+            </p>
+          )}
+        </div>
+        {!form && (
           <Button
             onClick={() => {
               setEditing(null);
@@ -102,157 +118,97 @@ function Schedules() {
             <Plus />
             Novo agendamento
           </Button>
-        }
-      >
-        <p className="text-sm text-muted-foreground">
-          Horário local de{" "}
-          <strong className="text-foreground">{query.data?.device ?? "este computador"}</strong>. A
-          conta Windows e o backend devem estar ativos para executar os fluxos.
+        )}
+      </header>
+      {mode === "local" && query.data?.running === false && (
+        <p role="alert" className="schedule-notice">
+          Agendador inativo. Reinicie o Cargo Hub para ativar as rotinas.
         </p>
-        <p className="mt-2 text-xs text-muted-foreground">
-          Cada agendamento inicia uma vez por dia selecionado. Se já houver uma execução, ele
-          aguarda a liberação do backend.
-        </p>
-      </Section>
-      {form && (
-        <Section title={editing ? "Editar agendamento" : "Novo agendamento"}>
-          <ScheduleForm
-            value={form}
-            onChange={setForm}
-            onSave={() => save.mutate()}
-            onCancel={() => {
-              setForm(null);
-              setEditing(null);
-            }}
-            saving={save.isPending}
-            editing={Boolean(editing)}
-          />
-        </Section>
       )}
-      <Section
-        title="Rotinas deste computador"
-        actions={
-          <Button size="sm" variant="outline" onClick={() => void query.refetch()}>
-            <RefreshCw className={query.isFetching ? "animate-spin" : ""} />
-            Atualizar
-          </Button>
-        }
-      >
-        {query.isError && (
-          <p role="alert" className="text-sm text-destructive">
-            Não foi possível consultar os agendamentos no backend.
-          </p>
-        )}
-        {query.data?.schedules.length === 0 && (
-          <div className="py-8 text-center text-muted-foreground">
-            <CalendarClock className="mx-auto mb-3 h-8 w-8" />
-            <p className="text-sm">Nenhum agendamento cadastrado.</p>
-          </div>
-        )}
-        {Boolean(query.data?.schedules.length) && (
-          <div className="overflow-x-auto">
-            <Table className="min-w-[800px]">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Ativo</TableHead>
-                  <TableHead>Rotina</TableHead>
-                  <TableHead>Próxima execução</TableHead>
-                  <TableHead>Último resultado</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {query.data?.schedules.map((value) => (
-                  <TableRow key={value.id}>
-                    <TableCell>
-                      <Switch
-                        checked={value.enabled}
-                        onCheckedChange={() => toggle.mutate(value)}
-                        disabled={toggle.isPending}
-                        aria-label={`Ativar ${value.name}`}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <p className="font-medium">{value.name}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {value.time} · {value.weekdays.map((day) => weekdayNames[day]).join(", ")}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {scheduleFlows[value.flow]} ·{" "}
-                        {value.days_back ? `Desde ${value.days_back} dia(s) atrás` : "Dia atual"}
-                      </p>
-                      <p className="text-xs text-muted-foreground">{value.operator_name}</p>
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      {!value.enabled
-                        ? "Desativado"
-                        : value.next_run_at && new Date(value.next_run_at).getTime() <= Date.now()
-                          ? "Aguardando execução"
-                          : value.next_run_at
-                            ? fmtDateTime(value.next_run_at)
-                            : "—"}
-                    </TableCell>
-                    <TableCell>
-                      <p>
-                        {value.last_run
-                          ? (runLabels[value.last_run.state] ?? value.last_run.state)
-                          : "Ainda não executado"}
-                      </p>
-                      {value.last_run && (
-                        <p
-                          className="max-w-64 text-xs text-muted-foreground"
-                          title={value.last_run.message}
-                        >
-                          {fmtDateTime(value.last_run.started_at)}
-                        </p>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          aria-label={`Editar ${value.name}`}
-                          onClick={() => {
-                            setEditing(value.id);
-                            setForm({
-                              name: value.name,
-                              time: value.time,
-                              weekdays: [...value.weekdays],
-                              flow: value.flow,
-                              days_back: value.days_back,
-                              enabled: value.enabled,
-                            });
-                          }}
-                        >
-                          <Pencil />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          aria-label={`Remover ${value.name}`}
-                          onClick={() => setRemoving(value)}
-                        >
-                          <Trash2 />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </Section>
+      {form ? (
+        <ScheduleForm
+          value={form}
+          onChange={setForm}
+          onSave={() => save.mutate()}
+          onCancel={closeForm}
+          saving={save.isPending}
+          editing={!!editing}
+          onRemove={
+            editing
+              ? () => setRemoving(values.find((value) => value.id === editing) ?? null)
+              : undefined
+          }
+        />
+      ) : (
+        <>
+          {notice && (
+            <div className="schedule-notice">
+              <FluentIcon name="help" />
+              <p>
+                <strong>O Cargo Hub precisa estar aberto para as rotinas rodarem.</strong> Ele pode
+                ficar minimizado na bandeja do Windows. Se outra execução estiver em andamento, a
+                rotina espera ela terminar.
+              </p>
+              <button
+                aria-label="Fechar orientação de agendamentos"
+                onClick={() => setNotice(false)}
+              >
+                <FluentIcon name="cancel" />
+              </button>
+            </div>
+          )}
+          {query.isError && (
+            <p role="alert" className="text-sm text-destructive">
+              Não foi possível consultar os agendamentos.{" "}
+              <button className="underline" onClick={() => void query.refetch()}>
+                Tentar novamente
+              </button>
+            </p>
+          )}
+          {query.isPending && <p className="text-sm text-muted-foreground">Carregando rotinas…</p>}
+          {!!values.length && (
+            <ScheduleList
+              values={values}
+              busy={mode !== "local" || !run.isSuccess || isBusy(run.data) || start.isPending}
+              starting={start.isPending ? start.variables?.id : undefined}
+              toggling={toggle.isPending}
+              onStart={(value) => start.mutate(value)}
+              onToggle={(value) => toggle.mutate(value)}
+              onEdit={(value) => {
+                setEditing(value.id);
+                setForm(scheduleDraft(value));
+              }}
+              onDuplicate={(value) => {
+                setEditing(null);
+                setForm({
+                  ...scheduleDraft(value),
+                  name: `${value.name.slice(0, 92)} (cópia)`,
+                  enabled: false,
+                });
+              }}
+              onHistory={setHistory}
+              onRemove={setRemoving}
+            />
+          )}
+          {query.isSuccess && !values.length && (
+            <div className="schedule-surface p-8 text-sm text-muted-foreground">
+              Nenhum agendamento cadastrado.
+            </div>
+          )}
+        </>
+      )}
+      {history && (
+        <ScheduleHistory key={history.id} value={history} onClose={() => setHistory(null)} />
+      )}
       <AlertDialog
-        open={Boolean(removing)}
+        open={!!removing}
         onOpenChange={(open) => {
           if (!open) setRemoving(null);
         }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remover agendamento?</AlertDialogTitle>
+            <AlertDialogTitle>Excluir rotina?</AlertDialogTitle>
             <AlertDialogDescription>
               A rotina {removing?.name} deixará de iniciar automaticamente.
             </AlertDialogDescription>
@@ -260,10 +216,13 @@ function Schedules() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => removing && remove.mutate(removing.id)}
               disabled={remove.isPending}
+              onClick={(event) => {
+                event.preventDefault();
+                if (removing) remove.mutate(removing.id);
+              }}
             >
-              Remover
+              Excluir rotina
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

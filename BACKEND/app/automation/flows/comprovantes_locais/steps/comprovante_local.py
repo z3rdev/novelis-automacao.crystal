@@ -225,7 +225,17 @@ class ComprovanteLocalFlow:
                 entries = list(current.iterdir())
             except OSError:
                 continue
+            if any(entry.name == ".cargo-hub-documents.json" for entry in entries):
+                from app.services.chat_files import published_documents
+                try:
+                    published = published_documents(current.parent, current.name)
+                    out.extend(dict.fromkeys(published[kind] for kind in ("guia", "comprovante") if kind in published))
+                except ValueError:
+                    pass
+                continue
             for entry in entries:
+                if entry.name == ".cargo-hub-versions":
+                    continue
                 if entry.is_dir():
                     stack.append(entry)
                 elif entry.is_file() and entry.suffix.lower() in allowed:
@@ -235,7 +245,7 @@ class ComprovanteLocalFlow:
     def _copy_if_needed(self, source: Path, target: Path) -> bool:
         if target.exists():
             try:
-                if target.stat().st_size == source.stat().st_size:
+                if (target.stat().st_size, target.stat().st_mtime_ns) == (source.stat().st_size, source.stat().st_mtime_ns):
                     return False
             except OSError:
                 pass

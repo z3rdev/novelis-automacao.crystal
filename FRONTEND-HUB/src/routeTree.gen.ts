@@ -11,14 +11,22 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AgendamentosRouteImport } from './routes/agendamentos'
+import { Route as AjudaRouteImport } from './routes/ajuda'
 import { Route as AvancadoRouteImport } from './routes/avancado'
 import { Route as ChamadosRouteImport } from './routes/chamados'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
+import { Route as ConversasRouteImport } from './routes/conversas'
+import { Route as DiagnosticosDevRouteImport } from './routes/diagnosticos-dev'
 import { Route as DocumentosRouteImport } from './routes/documentos'
 import { Route as ExecucaoRouteImport } from './routes/execucao'
+import { Route as MensagensRouteImport } from './routes/mensagens'
 import { Route as MonitorRouteImport } from './routes/monitor'
+import { Route as NotificacoesRouteImport } from './routes/notificacoes'
 import { Route as NotificacoesDevRouteImport } from './routes/notificacoes-dev'
 import { Route as PendentesRouteImport } from './routes/pendentes'
+import { Route as RelatoriosRouteImport } from './routes/relatorios'
+import { Route as SenhaMestreDevRouteImport } from './routes/senha-mestre-dev'
+import { Route as TarifasRouteImport } from './routes/tarifas'
 import { Route as UsuariosDevRouteImport } from './routes/usuarios-dev'
 
 const IndexRoute = IndexRouteImport.update({
@@ -29,6 +37,11 @@ const IndexRoute = IndexRouteImport.update({
 const AgendamentosRoute = AgendamentosRouteImport.update({
   id: '/agendamentos',
   path: '/agendamentos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AjudaRoute = AjudaRouteImport.update({
+  id: '/ajuda',
+  path: '/ajuda',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AvancadoRoute = AvancadoRouteImport.update({
@@ -46,6 +59,16 @@ const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
   path: '/configuracoes',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ConversasRoute = ConversasRouteImport.update({
+  id: '/conversas',
+  path: '/conversas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DiagnosticosDevRoute = DiagnosticosDevRouteImport.update({
+  id: '/diagnosticos-dev',
+  path: '/diagnosticos-dev',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DocumentosRoute = DocumentosRouteImport.update({
   id: '/documentos',
   path: '/documentos',
@@ -56,9 +79,19 @@ const ExecucaoRoute = ExecucaoRouteImport.update({
   path: '/execucao',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MensagensRoute = MensagensRouteImport.update({
+  id: '/mensagens',
+  path: '/mensagens',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MonitorRoute = MonitorRouteImport.update({
   id: '/monitor',
   path: '/monitor',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotificacoesRoute = NotificacoesRouteImport.update({
+  id: '/notificacoes',
+  path: '/notificacoes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NotificacoesDevRoute = NotificacoesDevRouteImport.update({
@@ -71,6 +104,21 @@ const PendentesRoute = PendentesRouteImport.update({
   path: '/pendentes',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RelatoriosRoute = RelatoriosRouteImport.update({
+  id: '/relatorios',
+  path: '/relatorios',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SenhaMestreDevRoute = SenhaMestreDevRouteImport.update({
+  id: '/senha-mestre-dev',
+  path: '/senha-mestre-dev',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TarifasRoute = TarifasRouteImport.update({
+  id: '/tarifas',
+  path: '/tarifas',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UsuariosDevRoute = UsuariosDevRouteImport.update({
   id: '/usuarios-dev',
   path: '/usuarios-dev',
@@ -80,41 +128,65 @@ const UsuariosDevRoute = UsuariosDevRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/agendamentos': typeof AgendamentosRoute
+  '/ajuda': typeof AjudaRoute
   '/avancado': typeof AvancadoRoute
   '/chamados': typeof ChamadosRoute
   '/configuracoes': typeof ConfiguracoesRoute
+  '/conversas': typeof ConversasRoute
+  '/diagnosticos-dev': typeof DiagnosticosDevRoute
   '/documentos': typeof DocumentosRoute
   '/execucao': typeof ExecucaoRoute
+  '/mensagens': typeof MensagensRoute
   '/monitor': typeof MonitorRoute
+  '/notificacoes': typeof NotificacoesRoute
   '/notificacoes-dev': typeof NotificacoesDevRoute
   '/pendentes': typeof PendentesRoute
+  '/relatorios': typeof RelatoriosRoute
+  '/senha-mestre-dev': typeof SenhaMestreDevRoute
+  '/tarifas': typeof TarifasRoute
   '/usuarios-dev': typeof UsuariosDevRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/agendamentos': typeof AgendamentosRoute
+  '/ajuda': typeof AjudaRoute
   '/avancado': typeof AvancadoRoute
   '/chamados': typeof ChamadosRoute
   '/configuracoes': typeof ConfiguracoesRoute
+  '/conversas': typeof ConversasRoute
+  '/diagnosticos-dev': typeof DiagnosticosDevRoute
   '/documentos': typeof DocumentosRoute
   '/execucao': typeof ExecucaoRoute
+  '/mensagens': typeof MensagensRoute
   '/monitor': typeof MonitorRoute
+  '/notificacoes': typeof NotificacoesRoute
   '/notificacoes-dev': typeof NotificacoesDevRoute
   '/pendentes': typeof PendentesRoute
+  '/relatorios': typeof RelatoriosRoute
+  '/senha-mestre-dev': typeof SenhaMestreDevRoute
+  '/tarifas': typeof TarifasRoute
   '/usuarios-dev': typeof UsuariosDevRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/agendamentos': typeof AgendamentosRoute
+  '/ajuda': typeof AjudaRoute
   '/avancado': typeof AvancadoRoute
   '/chamados': typeof ChamadosRoute
   '/configuracoes': typeof ConfiguracoesRoute
+  '/conversas': typeof ConversasRoute
+  '/diagnosticos-dev': typeof DiagnosticosDevRoute
   '/documentos': typeof DocumentosRoute
   '/execucao': typeof ExecucaoRoute
+  '/mensagens': typeof MensagensRoute
   '/monitor': typeof MonitorRoute
+  '/notificacoes': typeof NotificacoesRoute
   '/notificacoes-dev': typeof NotificacoesDevRoute
   '/pendentes': typeof PendentesRoute
+  '/relatorios': typeof RelatoriosRoute
+  '/senha-mestre-dev': typeof SenhaMestreDevRoute
+  '/tarifas': typeof TarifasRoute
   '/usuarios-dev': typeof UsuariosDevRoute
 }
 export interface FileRouteTypes {
@@ -122,54 +194,86 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/agendamentos'
+    | '/ajuda'
     | '/avancado'
     | '/chamados'
     | '/configuracoes'
+    | '/conversas'
+    | '/diagnosticos-dev'
     | '/documentos'
     | '/execucao'
+    | '/mensagens'
     | '/monitor'
+    | '/notificacoes'
     | '/notificacoes-dev'
     | '/pendentes'
+    | '/relatorios'
+    | '/senha-mestre-dev'
+    | '/tarifas'
     | '/usuarios-dev'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/agendamentos'
+    | '/ajuda'
     | '/avancado'
     | '/chamados'
     | '/configuracoes'
+    | '/conversas'
+    | '/diagnosticos-dev'
     | '/documentos'
     | '/execucao'
+    | '/mensagens'
     | '/monitor'
+    | '/notificacoes'
     | '/notificacoes-dev'
     | '/pendentes'
+    | '/relatorios'
+    | '/senha-mestre-dev'
+    | '/tarifas'
     | '/usuarios-dev'
   id:
     | '__root__'
     | '/'
     | '/agendamentos'
+    | '/ajuda'
     | '/avancado'
     | '/chamados'
     | '/configuracoes'
+    | '/conversas'
+    | '/diagnosticos-dev'
     | '/documentos'
     | '/execucao'
+    | '/mensagens'
     | '/monitor'
+    | '/notificacoes'
     | '/notificacoes-dev'
     | '/pendentes'
+    | '/relatorios'
+    | '/senha-mestre-dev'
+    | '/tarifas'
     | '/usuarios-dev'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AgendamentosRoute: typeof AgendamentosRoute
+  AjudaRoute: typeof AjudaRoute
   AvancadoRoute: typeof AvancadoRoute
   ChamadosRoute: typeof ChamadosRoute
   ConfiguracoesRoute: typeof ConfiguracoesRoute
+  ConversasRoute: typeof ConversasRoute
+  DiagnosticosDevRoute: typeof DiagnosticosDevRoute
   DocumentosRoute: typeof DocumentosRoute
   ExecucaoRoute: typeof ExecucaoRoute
+  MensagensRoute: typeof MensagensRoute
   MonitorRoute: typeof MonitorRoute
+  NotificacoesRoute: typeof NotificacoesRoute
   NotificacoesDevRoute: typeof NotificacoesDevRoute
   PendentesRoute: typeof PendentesRoute
+  RelatoriosRoute: typeof RelatoriosRoute
+  SenhaMestreDevRoute: typeof SenhaMestreDevRoute
+  TarifasRoute: typeof TarifasRoute
   UsuariosDevRoute: typeof UsuariosDevRoute
 }
 
@@ -187,6 +291,13 @@ declare module '@tanstack/react-router' {
       path: '/agendamentos'
       fullPath: '/agendamentos'
       preLoaderRoute: typeof AgendamentosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ajuda': {
+      id: '/ajuda'
+      path: '/ajuda'
+      fullPath: '/ajuda'
+      preLoaderRoute: typeof AjudaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/avancado': {
@@ -210,6 +321,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConfiguracoesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/conversas': {
+      id: '/conversas'
+      path: '/conversas'
+      fullPath: '/conversas'
+      preLoaderRoute: typeof ConversasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/diagnosticos-dev': {
+      id: '/diagnosticos-dev'
+      path: '/diagnosticos-dev'
+      fullPath: '/diagnosticos-dev'
+      preLoaderRoute: typeof DiagnosticosDevRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/documentos': {
       id: '/documentos'
       path: '/documentos'
@@ -224,11 +349,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ExecucaoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/mensagens': {
+      id: '/mensagens'
+      path: '/mensagens'
+      fullPath: '/mensagens'
+      preLoaderRoute: typeof MensagensRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/monitor': {
       id: '/monitor'
       path: '/monitor'
       fullPath: '/monitor'
       preLoaderRoute: typeof MonitorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notificacoes': {
+      id: '/notificacoes'
+      path: '/notificacoes'
+      fullPath: '/notificacoes'
+      preLoaderRoute: typeof NotificacoesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/notificacoes-dev': {
@@ -245,6 +384,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PendentesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/relatorios': {
+      id: '/relatorios'
+      path: '/relatorios'
+      fullPath: '/relatorios'
+      preLoaderRoute: typeof RelatoriosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/senha-mestre-dev': {
+      id: '/senha-mestre-dev'
+      path: '/senha-mestre-dev'
+      fullPath: '/senha-mestre-dev'
+      preLoaderRoute: typeof SenhaMestreDevRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tarifas': {
+      id: '/tarifas'
+      path: '/tarifas'
+      fullPath: '/tarifas'
+      preLoaderRoute: typeof TarifasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/usuarios-dev': {
       id: '/usuarios-dev'
       path: '/usuarios-dev'
@@ -258,14 +418,22 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AgendamentosRoute: AgendamentosRoute,
+  AjudaRoute: AjudaRoute,
   AvancadoRoute: AvancadoRoute,
   ChamadosRoute: ChamadosRoute,
   ConfiguracoesRoute: ConfiguracoesRoute,
+  ConversasRoute: ConversasRoute,
+  DiagnosticosDevRoute: DiagnosticosDevRoute,
   DocumentosRoute: DocumentosRoute,
   ExecucaoRoute: ExecucaoRoute,
+  MensagensRoute: MensagensRoute,
   MonitorRoute: MonitorRoute,
+  NotificacoesRoute: NotificacoesRoute,
   NotificacoesDevRoute: NotificacoesDevRoute,
   PendentesRoute: PendentesRoute,
+  RelatoriosRoute: RelatoriosRoute,
+  SenhaMestreDevRoute: SenhaMestreDevRoute,
+  TarifasRoute: TarifasRoute,
   UsuariosDevRoute: UsuariosDevRoute,
 }
 export const routeTree = rootRouteImport

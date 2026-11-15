@@ -60,6 +60,9 @@ def _write_snapshot(path: Path, payload: dict[str, Any]) -> None:
 
 
 def load_chamado_rows(workspace: Path, report_path: Any, snapshot_path: Any = None) -> list[dict[str, Any]]:
+    from app.services.chamados_catalog import current_catalog
+    if catalog := current_catalog(workspace):
+        return catalog.all_raw()
     # Local rows first so a fresh local computation is preferred; the network snapshot
     # (from whichever machine last computed it) only fills in what local sources miss.
     rows = list(read_chamados_payload(workspace, report_path).get("rows", []))
@@ -254,6 +257,7 @@ def _rows_from_report(report_rows: list[dict[str, Any]]) -> list[dict[str, Any]]
                 "cte": "-".join(part for part in [filial, serie, documento] if part),
                 "data": _text(row.get("abertoEm")),
                 "dataSort": _date_sort(row.get("abertoEm")),
+                "abertoEm": _date_sort(row.get("abertoEm")),
                 "vlrTotal": None,
                 "aberturaNovelis": "SOLUCIONADO",
                 "idTarifario": "",
@@ -283,6 +287,7 @@ def _normalize_sql_row(row: dict[str, Any], chamado_data: dict[str, Any]) -> dic
         "cte": cte,
         "data": data,
         "dataSort": _date_sort(data),
+        "abertoEm": _date_sort(chamado_data.get("abertoEm")),
         "vlrTotal": _number(row.get("VLR_TOTAL") or row.get("vlrTotal") or row.get("valorTotal")),
         "aberturaNovelis": "SOLUCIONADO" if chamado else "PENDENTE",
         "idTarifario": _text(row.get("ID_TARIFARIO") or row.get("idTarifario") or row.get("tarifarioId")),

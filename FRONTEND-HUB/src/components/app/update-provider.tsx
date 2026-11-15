@@ -101,16 +101,23 @@ export function UpdateProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function UpdateButton({ sidebar = false }: { sidebar?: boolean }) {
+export function UpdateButton({
+  sidebar = false,
+  onlyAvailable = false,
+}: {
+  sidebar?: boolean;
+  onlyAvailable?: boolean;
+}) {
   const context = useContext(UpdateContext);
   const { mode } = useApi();
   if (!context || mode !== "local") return null;
+  if (onlyAvailable && !context.available) return null;
   const label = context.available ? "Nova versão disponível" : "Atualizações";
   if (sidebar)
     return (
       <SidebarMenu>
         <SidebarMenuItem>
-          <SidebarMenuButton onClick={context.show} tooltip={label}>
+          <SidebarMenuButton onClick={context.show} tooltip={label} aria-label={label}>
             <Download className="h-4 w-4" />
             <span>{label}</span>
             {context.available && <span className="ml-auto h-2 w-2 rounded-full bg-teal-400" />}

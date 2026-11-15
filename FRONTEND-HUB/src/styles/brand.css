@@ -90,6 +90,11 @@
   opacity: 0;
   transform: translateY(10px);
 }
+/* The hidden page and the splash exit transform must not scroll the viewport. */
+html:has(.cargo-splash),
+body:has(.cargo-splash) {
+  overflow: hidden;
+}
 .cargo-splash {
   position: fixed;
   inset: 0;

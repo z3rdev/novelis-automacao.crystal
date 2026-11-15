@@ -11,6 +11,8 @@ import { useApi, type ConfigGroup } from "@/services";
 import { toast } from "sonner";
 import { DeveloperSettings } from "@/components/app/developer-settings";
 import { DesktopSettings } from "@/components/app/desktop-settings";
+import { MasterAccessGate } from "@/components/app/master-access-gate";
+import { UpdateButton } from "@/components/app/update-provider";
 
 export const Route = createFileRoute("/configuracoes")({
   head: () => ({ meta: [
@@ -23,6 +25,10 @@ export const Route = createFileRoute("/configuracoes")({
 });
 
 function Config() {
+  return <MasterAccessGate><ConfigurationContent /></MasterAccessGate>;
+}
+
+function ConfigurationContent() {
   const { api, mode, baseUrl, setBaseUrl } = useApi();
   const health = useQuery({ queryKey: ["health", mode, baseUrl], queryFn: () => api.getHealth(), retry: 0 });
   const cfg = useQuery({ queryKey: ["config", mode, baseUrl], queryFn: () => api.getConfig(), retry: 0 });
@@ -36,6 +42,7 @@ function Config() {
   return (
     <PageBody>
       <DesktopSettings />
+      <Section title="Atualizações"><UpdateButton /></Section>
       <DeveloperSettings />
       <Section title="Conexão com o backend">
         <div className="flex flex-wrap items-end gap-2">

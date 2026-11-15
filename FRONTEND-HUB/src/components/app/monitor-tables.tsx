@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/table";
 import { TableBox } from "./page";
 import { DeviceConnection, installationLabels, MonitorStatus } from "./monitor-status";
+import { DeviceClassificationText } from "./monitor-classification";
 
 export function DeviceTable({
   items,
@@ -24,7 +25,8 @@ export function DeviceTable({
       <Table className="min-w-[1050px] [&_td]:whitespace-nowrap [&_th]:whitespace-nowrap">
         <TableHeader>
           <TableRow>
-            <TableHead>Computador</TableHead>
+            <TableHead>Computador / setor</TableHead>
+            <TableHead>Filial / estação</TableHead>
             <TableHead>Conexão</TableHead>
             <TableHead>Instalação / versão</TableHead>
             <TableHead>Operador conectado</TableHead>
@@ -38,7 +40,16 @@ export function DeviceTable({
             <TableRow key={item.id}>
               <TableCell>
                 <span className="font-medium text-primary">{item.computer_name}</span>
+                <div className="mt-1 max-w-60 truncate text-xs">
+                  <DeviceClassificationText device={item} field="sector" />
+                </div>
                 <div className="mt-1 text-xs text-muted-foreground">{item.windows_user}</div>
+              </TableCell>
+              <TableCell>
+                <DeviceClassificationText device={item} field="branch" />
+                <div className="mt-1 text-xs text-muted-foreground">
+                  <DeviceClassificationText device={item} field="station_type" />
+                </div>
               </TableCell>
               <TableCell>
                 <DeviceConnection online={item.online} />
@@ -79,7 +90,7 @@ export function DeviceTable({
           ))}
           {!items.length && (
             <TableRow>
-              <TableCell colSpan={7} className="py-12 text-center text-muted-foreground">
+              <TableCell colSpan={8} className="py-12 text-center text-muted-foreground">
                 Nenhum computador corresponde aos filtros.
               </TableCell>
             </TableRow>
@@ -112,7 +123,13 @@ export function SessionTable({ items }: { items: MonitoredSession[] }) {
                 <div className="font-medium text-primary">{item.operator_name}</div>
                 <div className="mt-1 text-xs text-muted-foreground">{item.windows_user}</div>
               </TableCell>
-              <TableCell>{item.computer_name}</TableCell>
+              <TableCell>
+                {item.computer_name}
+                <div className="mt-1 max-w-60 truncate text-xs text-muted-foreground">
+                  <DeviceClassificationText device={item} field="sector" /> ·{" "}
+                  <DeviceClassificationText device={item} field="branch" />
+                </div>
+              </TableCell>
               <TableCell>
                 <MonitorStatus value={item.display_status} />
               </TableCell>

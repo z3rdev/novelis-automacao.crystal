@@ -23,12 +23,16 @@ def test_new_pdf_location_uses_existing_document_folder_convention(tmp_path):
 
 @pytest.mark.parametrize("folder", ["", "cte-397", "cte_397"])
 @pytest.mark.parametrize("name", ["CTE_1-10-397.pdf", "1-10-397.pdf", "cte_1_10_397.pdf"])
-def test_existing_names_and_folders_are_discovered(tmp_path, folder, name):
+@pytest.mark.parametrize("indexed", [False, True])
+def test_existing_names_and_folders_are_discovered(tmp_path, folder, name, indexed):
     directory = tmp_path / folder
     directory.mkdir(exist_ok=True)
     path = directory / name
     path.write_bytes(b"%PDF-existing")
-    assert find_pdf_evidence(tmp_path, {"filial": 1, "serie": 10, "documento": 397}) == path
+    from app.services.document_index import DocumentIndex
+    index = DocumentIndex()
+    index.files(tmp_path, {".pdf"})
+    assert find_pdf_evidence(tmp_path, {"filial": 1, "serie": 10, "documento": 397}, files=index.files if indexed else None) == path
 
 
 def test_canonical_folder_is_preferred_over_old_root_file(tmp_path):

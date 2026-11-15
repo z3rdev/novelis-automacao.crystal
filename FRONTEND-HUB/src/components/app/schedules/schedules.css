@@ -1,0 +1,297 @@
+.schedules-page {
+  padding-top: 24px;
+}
+.schedules-page.schedule-edit-page {
+  max-width: 1048px;
+}
+.schedules-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+.schedules-heading h1 {
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+.schedules-heading p {
+  margin-top: 6px;
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+.schedule-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 13px 16px;
+  border: 1px solid color-mix(in srgb, var(--primary) 15%, var(--border));
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--primary) 3%, var(--background));
+  font-size: 13px;
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+.schedule-notice > .fluent-icon {
+  margin-top: 4px;
+}
+.schedule-notice p {
+  flex: 1;
+}
+.schedule-notice button {
+  color: var(--muted-foreground);
+}
+.schedule-surface,
+.schedule-table-wrap {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  overflow: hidden;
+}
+.schedule-table-wrap {
+  overflow-x: auto;
+}
+.schedule-table {
+  width: 100%;
+  min-width: 760px;
+  text-align: left;
+  font-size: 13px;
+}
+.schedule-table th {
+  color: var(--muted-foreground);
+  font-size: 11px;
+  font-weight: 400;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.schedule-table td {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.schedule-table tr:last-child td {
+  border-bottom: 0;
+}
+.schedule-table .schedule-hour {
+  font-size: 20px;
+  font-weight: 600;
+  white-space: nowrap;
+  width: 80px;
+}
+.schedule-table .schedule-name {
+  font-weight: 500;
+  font-size: 15px;
+}
+.schedule-table p {
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+  line-height: 1.45;
+}
+.schedule-table tr[data-paused="true"] .schedule-hour,
+.schedule-table tr[data-paused="true"] .schedule-name {
+  color: var(--muted-foreground);
+}
+.schedule-table tr[data-paused="true"] .schedule-description {
+  opacity: 0.7;
+}
+.schedule-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.schedule-result {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.schedule-result[data-state="failed"],
+.schedule-result[data-state="interrupted"] {
+  color: var(--destructive);
+}
+.schedule-result[data-state="completed"] > .fluent-icon {
+  color: var(--success);
+}
+.schedule-form {
+  max-width: 1000px;
+  width: 100%;
+  margin-inline: auto;
+  display: grid;
+  gap: 28px;
+}
+.schedule-form-section > h2 {
+  font-size: 15px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+.schedule-setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.schedule-setting-row:last-child {
+  border-bottom: 0;
+}
+.schedule-setting-row label {
+  font-weight: 500;
+  font-size: 14px;
+}
+.schedule-setting-row p,
+.schedule-flow-summary p {
+  margin-top: 3px;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.schedule-name-input {
+  width: min(100%, 320px);
+}
+.schedule-time-input {
+  width: 120px;
+}
+.schedule-number {
+  width: 64px;
+  flex-shrink: 0;
+}
+.schedule-inline-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--muted-foreground);
+}
+.schedule-days-row {
+  flex-wrap: wrap;
+}
+.schedule-day-presets {
+  display: flex;
+  border-radius: 6px;
+  padding: 3px;
+  background: var(--muted);
+  margin-left: auto;
+}
+.schedule-day-presets button {
+  font-size: 12px;
+  height: 30px;
+  padding: 0 12px;
+}
+.schedule-day-presets button[aria-pressed="true"] {
+  background: var(--card);
+  color: var(--foreground);
+  box-shadow: 0 1px 3px #0b254520;
+}
+.schedule-weekdays {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex-basis: 100%;
+}
+.schedule-weekdays button[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--primary) 5%, var(--card));
+  border-color: var(--primary);
+}
+.schedule-choice {
+  border-bottom: 1px solid var(--border);
+  padding: 16px 20px;
+}
+.schedule-choice:last-child {
+  border-bottom: 0;
+}
+.schedule-choice-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.schedule-choice-label input {
+  margin-top: 3px;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+}
+.schedule-choice-description {
+  display: block;
+  color: var(--muted-foreground);
+  margin-top: 3px;
+  font-size: 13px;
+}
+.schedule-choice-detail {
+  margin: 14px 0 0 30px;
+}
+.schedule-step-select {
+  min-height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 6px 10px;
+  background: var(--card);
+  font-size: 13px;
+  width: min(100%, 360px);
+}
+.schedule-flow-summary {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--background);
+  padding: 12px 16px;
+  font-size: 13px;
+}
+.schedule-flow-summary > div {
+  flex: 1;
+  min-width: 0;
+}
+.schedule-form-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-top: 1px solid var(--border);
+  padding-top: 20px;
+  margin-top: 4px;
+}
+.schedule-form-footer > div {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+.schedule-error {
+  font-size: 12px;
+  color: var(--destructive);
+  margin: 6px 0 0;
+}
+@media (max-width: 800px) {
+  .schedule-setting-row {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+  .schedule-name-input {
+    width: 100%;
+  }
+  .schedule-inline-controls {
+    justify-content: flex-start;
+  }
+  .schedule-day-presets {
+    margin-left: 0;
+  }
+  .schedule-table td,
+  .schedule-table th {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+  .schedules-heading h1 {
+    font-size: 24px;
+  }
+  .schedule-flow-summary {
+    flex-wrap: wrap;
+  }
+}

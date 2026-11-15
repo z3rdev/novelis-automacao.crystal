@@ -1,13 +1,17 @@
 from pathlib import Path
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from fastapi.responses import FileResponse
 from playwright.async_api import Error as PlaywrightError
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
+from datetime import date
+from app.domain.consultation_period import validate_period
 
 from app.api.routers.health import _read_app_version
 from app.services.hub_service import HubService
+from app.api.deps import require_master_access, require_operator_session
+from app.infrastructure.chamados_postgres import CommunicationUnavailable
 
 router = APIRouter(prefix="/hub", tags=["cargo-hub"])
 
@@ -23,9 +27,20 @@ HubDep = Annotated[HubService, Depends(get_hub)]
 
 
 class StartRequest(BaseModel):
-    flow: Literal["completo", "documentos", "somente_pdf", "somente_xml", "somente_chamados", "consulta"] = "completo"
+    flow: Literal["completo", "documentos", "somente_pdf", "somente_xml", "somente_comprovantes", "buscar_chamados", "somente_chamados", "consulta"] = "completo"
     ctes: list[str] = Field(default_factory=list, max_length=500)
     periodoDias: int = Field(default=5, ge=0, le=90)
+    dataInicio: date | None = None
+    dataFim: date | None = None
+    chamadoHttp: bool = False
+
+    @model_validator(mode="after")
+    def period(self):
+        validate_period(self.dataInicio, self.dataFim)
+        return self
+
+    def range_options(self):
+        return {"date_start": self.dataInicio, "date_end": self.dataFim} if self.dataInicio else {}
 
 
 @router.get("/health/ping")
@@ -39,6 +54,8 @@ async def overview(hub: HubDep):
         return await hub.overview()
     except OSError:
         raise HTTPException(503, "Verificacao dos arquivos indisponivel. Verifique acesso as pastas configuradas.") from None
+    except CommunicationUnavailable:
+        raise HTTPException(503, "Não foi possível conferir os chamados já abertos no banco de comunicação.") from None
 
 
 @router.get("/ctes")
@@ -47,12 +64,14 @@ def ctes(hub: HubDep):
         return hub.ctes()
     except OSError:
         raise HTTPException(503, "Verificacao dos arquivos indisponivel. Verifique acesso as pastas configuradas.") from None
+    except CommunicationUnavailable:
+        raise HTTPException(503, "Não foi possível conferir os chamados já abertos no banco de comunicação.") from None
 
 
 @router.post("/ctes/refresh")
 async def refresh(body: StartRequest, request: Request, hub: HubDep):
     try:
-        await hub.start("consulta", [], body.periodoDias, request.headers.get("X-Operator-Session"))
+        await hub.start("consulta", [], body.periodoDias, request.headers.get("X-Operator-Session"), **body.range_options())
     except RuntimeError as exc:
         raise HTTPException(409, str(exc)) from exc
     except ValueError as exc:
@@ -68,7 +87,7 @@ async def current(hub: HubDep):
 @router.post("/runs")
 async def start(body: StartRequest, request: Request, hub: HubDep):
     try:
-        return await hub.start(body.flow, body.ctes, body.periodoDias, request.headers.get("X-Operator-Session"))
+        return await hub.start(body.flow, body.ctes, body.periodoDias, request.headers.get("X-Operator-Session"), http_test=body.chamadoHttp, **body.range_options())
     except RuntimeError as exc:
         raise HTTPException(409, str(exc)) from exc
     except ValueError as exc:
@@ -118,6 +137,41 @@ def chamados(hub: HubDep):
     return hub.chamados()
 
 
+@router.get("/chamados/page")
+def chamados_page(hub: HubDep, search: str = Query(default="", max_length=200),
+                  status: Literal["todos", "na_fila", "aberto", "em_analise", "solucionado", "falhou"] = "todos",
+                  page: int = Query(default=0, ge=0), size: int = Query(default=100, ge=1, le=100)):
+    from app.infrastructure.chamados_postgres import CommunicationUnavailable
+    try:
+        return hub.chamados_catalog.page(search=search, status=status, page=page, size=size)
+    except CommunicationUnavailable as exc:
+        raise HTTPException(503, str(exc)) from None
+
+
+@router.get("/chamados/summary")
+def chamados_summary(hub: HubDep):
+    repository = hub.chamados_catalog.repository
+    if not repository.enabled:
+        raise HTTPException(503, "Configure o PostgreSQL de comunicação para consultar os chamados centralizados.")
+    try:
+        # Menu polling only reads aggregates. Source imports stay in the background worker.
+        return {"counts": repository.counts()}
+    except CommunicationUnavailable:
+        raise HTTPException(503, "Contagem dos chamados indisponível. Verifique o banco de comunicação.") from None
+
+
+@router.get("/chamados/{identifier}", dependencies=[Depends(require_operator_session)])
+def chamado_detail(identifier: str, hub: HubDep):
+    from app.infrastructure.chamados_postgres import CommunicationUnavailable
+    try:
+        value = hub.chamados_catalog.detail(identifier)
+    except CommunicationUnavailable as exc:
+        raise HTTPException(503, str(exc)) from None
+    if not value:
+        raise HTTPException(404, "Chamado não encontrado no catálogo de comunicação.")
+    return value
+
+
 @router.get("/logs")
 def logs(hub: HubDep, since: str | None = None):
     if since and not since.isdecimal():
@@ -125,17 +179,17 @@ def logs(hub: HubDep, since: str | None = None):
     return hub.logs(since)
 
 
-@router.get("/health/diagnostics")
+@router.get("/health/diagnostics", dependencies=[Depends(require_master_access)])
 def health(hub: HubDep):
     return hub.database_health()
 
 
-@router.get("/config")
+@router.get("/config", dependencies=[Depends(require_master_access)])
 def configuration(hub: HubDep):
     return hub.config_groups()
 
 
-@router.put("/config")
+@router.put("/config", dependencies=[Depends(require_master_access)])
 def save_configuration(body: list[dict], hub: HubDep):
     try:
         hub.save_config(body)

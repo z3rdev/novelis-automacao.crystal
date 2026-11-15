@@ -1,0 +1,8 @@
+<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><title>Diagnóstico DACTE · Cargo Hub</title><style>__STYLE__</style></head>
+<body><header class="topbar"><span class="brand">Cargo<span>Hub</span></span><span>Diagnóstico da instalação</span><button id="theme" aria-label="Alternar tema">Tema escuro</button></header>
+<main><div class="page-title"><div><h1>Diagnóstico do DACTE</h1><p>Verificação da instalação · Relatório local</p></div><div class="actions"><button id="copy">Copiar dados</button><button id="download">Baixar JSON</button><button id="print">Imprimir</button></div></div>
+<div class="summary"><div><span class="overall warning">A preparação ainda não foi concluída</span><p>O Python local não foi encontrado. Os componentes DACTE não foram testados.</p></div><p class="production">Validação para produção: <strong>não confirmada</strong></p></div>
+<section style="margin-top:24px"><h2>Preparação do aplicativo</h2><div class="surface"><div class="check-row" data-status="error"><div class="check-label"><span class="state-icon" aria-hidden="true">!</span><div><h3>Python do Cargo Hub</h3><p>Execute scripts/bootstrap.ps1 e repita a preparação do DACTE.</p><p class="hint">A ausência do Python impede a verificação do Crystal, da conexão SQL e da geração de PDF.</p></div></div><span class="status error">Ausente</span></div></div></section>
+<details class="technical"><summary>Dados técnicos do diagnóstico</summary><pre id="report-data">__DATA__</pre></details><p id="feedback" role="status" aria-live="polite"></p><footer>Repita a verificação após ajustar a instalação.</footer></main><script>__SCRIPT__</script></body></html>

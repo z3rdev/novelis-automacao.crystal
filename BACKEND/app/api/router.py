@@ -18,6 +18,12 @@ from app.api.routers import (
     steps,
     updates,
     operator_features,
+    message_configuration,
+    master_access,
+    tariffs,
+    execution_reports,
+    developer_diagnostics,
+    chat,
 )
 
 
@@ -39,3 +45,10 @@ api_router.include_router(events.router)
 api_router.include_router(pendentes.router)
 api_router.include_router(capture_files.router)
 api_router.include_router(reports.router)
+
+api_router.include_router(message_configuration.router)
+api_router.include_router(master_access.router)
+api_router.include_router(tariffs.router)
+api_router.include_router(execution_reports.router)
+api_router.include_router(developer_diagnostics.router)
+api_router.include_router(chat.router)

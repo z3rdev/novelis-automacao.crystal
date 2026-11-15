@@ -285,6 +285,7 @@ def test_installer_readiness_checks_api_without_starting_jobs_or_interrupting_se
     with TestClient(app) as client:
         assert client.get("/api/hub/health/ping").status_code == 200
         assert app.state.device_presence is None
+        assert app.state.diagnostic_agent is None
         assert not hasattr(app.state, "notification_sync_task")
     assert app.state.session_audit.session(actor["id"])
     assert app.state.session_audit.pending() == 1

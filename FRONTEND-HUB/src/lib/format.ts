@@ -8,7 +8,11 @@ const formatDate = (s: string | null | undefined, formatter: Intl.DateTimeFormat
   return Number.isNaN(date.getTime()) ? s : formatter.format(date);
 };
 export const fmtDateTime = (s?: string | null) => formatDate(s, dt);
-export const fmtDate = (s?: string | null) => formatDate(s, d);
+// ISO calendar dates have no timezone. Parsing them as UTC shifts the day
+// backwards in Brazil, including the displayed end date of a tariff.
+export const fmtDate = (s?: string | null) => formatDate(
+  s && /^\d{4}-\d{2}-\d{2}$/.test(s) ? `${s}T12:00:00` : s, d,
+);
 export const fmtTime = (s?: string | null) => formatDate(s, t);
 export const fmtBRL = (n: number | null) => n === null ? "—" : brl.format(n);
 export const fmtNum = (n: number) => n.toLocaleString("pt-BR");

@@ -7,6 +7,8 @@ import socket
 
 import psutil
 
+from app.services.device_classification import classify_computer_name
+
 
 def windows_user() -> str:
     if os.name != "nt":
@@ -32,5 +34,6 @@ def device_identity() -> dict:
             if (value.family == psutil.AF_LINK and re.fullmatch(r"(?:[0-9A-F]{2}:){5}[0-9A-F]{2}", address)
                     and address != "00:00:00:00:00:00" and not int(address[:2], 16) & 1):
                 addresses.add(address)
-    return {"windows_user": windows_user(), "computer_name": socket.gethostname(),
-            "mac_addresses": sorted(addresses)}
+    computer_name = socket.gethostname()
+    return {"windows_user": windows_user(), "computer_name": computer_name,
+            "mac_addresses": sorted(addresses), "classification": classify_computer_name(computer_name)}

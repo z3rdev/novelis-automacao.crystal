@@ -71,7 +71,10 @@ class XmlSefazFlow:
         if browser is None:
             raise RuntimeError("BrowserDriver obrigatório para XML Sefaz real.")
         if not target.get("cteId"):
-            raise RuntimeError("XML Sefaz precisa da chave CTe de 44 digitos ou fonte JSON com cteId.")
+            raise RuntimeError(
+                f"CT-e {target['cte']} sem chave de acesso de 44 dígitos. "
+                "Confira a emissão e a autorização no Rodopar antes de tentar baixar o XML."
+            )
 
         cert = await run_blocking(configure_certificate, config)
         if browser.certificate != cert and browser.state().get("open"):
@@ -79,7 +82,7 @@ class XmlSefazFlow:
         browser.certificate = cert
         if cert:
             await emit_step(self.emit, run_id, "xml_sefaz.certificate",
-                            f"Certificado Windows selecionado automaticamente: {cert['subjectCN']}.",
+                            "Certificado Windows preparado para autenticação.",
                             {"cte": target["cte"], "expiresAt": cert["notAfter"]})
         page = await self._fazenda_page(browser)
         return await self._download_xml(page, config, target, run_id)
@@ -338,7 +341,7 @@ class XmlSefazFlow:
         config: dict[str, Any],
         request: RunStartRequest,
     ) -> dict[str, Any] | None:
-        raw = str(config.get("ctes") or request.sample_cte or "").strip()
+        raw = config.get("targetRow") or config.get("ctes") or request.sample_cte or ""
         target = self._parse_target(raw, config)
         if target and target.get("cteId"):
             return target

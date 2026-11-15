@@ -9,6 +9,7 @@ from openpyxl import load_workbook
 from playwright.async_api import Page
 
 from app.automation.flows.flow_events import Emit, emit_step, emit_warn
+from app.automation.cancellation import run_blocking
 from app.automation.flows.novelis_chamados.steps.novelis import NovelisFlow
 from app.infrastructure.json_store import read_json, write_json
 from app.services.browser_driver import BrowserDriver
@@ -32,7 +33,7 @@ class NovelisRelatorioCteXmlFlow:
         if config.get("relatorioCteXmlEnabled") is False:
             return {**base, "skipped": True, "error": "NOVELIS_RELATORIO_CTE_XML_ENABLED=false"}
 
-        cached = self._load_fresh_cache(config) if config.get("relatorioCteXmlSkipIfFreshToday", True) else None
+        cached = await run_blocking(self._load_fresh_cache, config) if config.get("relatorioCteXmlSkipIfFreshToday", True) else None
         json_file = self._json_file(config)
         if cached:
             download_info, report_rows, generated_at = cached
@@ -45,16 +46,11 @@ class NovelisRelatorioCteXmlFlow:
             )
             payload = self._payload(download_info, report_rows)
         else:
-            if browser is None:
-                return {**base, "skipped": True, "error": "Browser indisponível para baixar Excel Novelis."}
-
-            page = await self._novelis_page(browser)
-            await NovelisFlow(self.cwd, self.emit).ensure_portal_authenticated(page, config, run_id)
-            download_info = await self._download_excel(page, config, run_id)
-            report_rows = self._parse_excel(download_info["file"])
+            download_info = await self._retrieve_excel(browser, config, run_id)
+            report_rows = await run_blocking(self._parse_excel, download_info["file"])
             payload = self._payload(download_info, report_rows)
             if json_file:
-                write_json(json_file, payload)
+                await run_blocking(write_json, json_file, payload)
 
         rows_with_id = [row for row in prepared_rows if self._row_key(row)]
         if not rows_with_id:
@@ -111,6 +107,28 @@ class NovelisRelatorioCteXmlFlow:
             "dateRange": download_info["dateRange"],
             "payload": payload,
         }
+
+    async def _retrieve_excel(self, browser, config, run_id):
+        from app.services.novelis_report_http import ReportDownloadError, download_report
+        mode = str(config.get("relatorioCteXmlTransport") or "http").lower()
+        if mode != "browser":
+            try:
+                await emit_step(self.emit, run_id, "novelis_relatorio.http_download", "Relatório Novelis: consultando o portal para baixar o Excel por HTTP.", {"querySource": "novelis"})
+                result = await download_report(config, self._date_range(config), self._excel_file(config, "relatorio_cte.xlsx"))
+                await emit_step(self.emit, run_id, "novelis_relatorio.downloaded",
+                                "Excel Novelis baixado por HTTP, sem abrir navegador.",
+                                {"transport": "http", "excelFile": str(result["file"])})
+                return result
+            except ReportDownloadError:
+                if mode != "auto" or browser is None:
+                    raise
+                await emit_warn(self.emit, run_id, "novelis_relatorio.http_unavailable",
+                                "Exportação HTTP indisponível; usando o navegador autorizado.")
+        if browser is None:
+            raise RuntimeError("Navegador indisponível para a exportação Novelis.")
+        page = await self._novelis_page(browser)
+        await NovelisFlow(self.cwd, self.emit).ensure_portal_authenticated(page, config, run_id)
+        return await self._download_excel(page, config, run_id)
 
     async def _novelis_page(self, browser: BrowserDriver) -> Page:
         page = await browser.find_page_by_url("novelis")
@@ -286,6 +304,12 @@ class NovelisRelatorioCteXmlFlow:
                 fallback_key = f"{self._part(row.get('serie'))}|{self._part(row.get('documento'))}"
                 if fallback_key != "|":
                     hit = match_by_serie_nct.get(fallback_key)
+                    target_id = self._digits(row.get("cteId") or row.get("CTE_ID"))
+                    report_id = self._digits((hit or {}).get("cteId") or (hit or {}).get("id"))
+                    if len(target_id) == len(report_id) == 44 and target_id != report_id:
+                        hit = None
+            if hit and not str(hit.get("chamadoNumero") or "").strip():
+                hit = None
             if not hit:
                 kept_rows.append({**row, "__novelis": {"prechecked": True, "alreadyExists": False}})
                 continue
@@ -411,7 +435,7 @@ class NovelisRelatorioCteXmlFlow:
         }
         return download_info, report_rows, generated_at
 
-    def _is_today(self, iso_value: str) -> bool:
+    def _is_today(self, iso_value: str, *, now=None) -> bool:
         if not iso_value:
             return False
         try:
@@ -420,7 +444,8 @@ class NovelisRelatorioCteXmlFlow:
             return False
         if parsed.tzinfo is None:
             parsed = parsed.replace(tzinfo=timezone.utc)
-        return parsed.astimezone(timezone.utc).date() == datetime.now(timezone.utc).date()
+        local_now = now or datetime.now().astimezone()
+        return parsed.astimezone(local_now.tzinfo).date() == local_now.date()
 
     def _row_key(self, row: dict[str, Any]) -> str:
         return self._build_key(row.get("cteId") or row.get("CTE_ID"), row.get("serie"), row.get("documento"))

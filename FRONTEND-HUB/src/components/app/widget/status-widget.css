@@ -1,0 +1,222 @@
+html:has(.status-widget-shell),
+body:has(.status-widget-shell) {
+  height: 100%;
+  overflow: hidden;
+}
+body:has(.status-widget-shell) #root {
+  height: 100%;
+}
+.status-widget-shell {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 310px;
+  color: var(--foreground);
+  background: var(--card);
+  border: 1px solid var(--border);
+  font-family: "Segoe UI Variable", "Segoe UI", sans-serif;
+  user-select: none;
+}
+.status-widget-header {
+  height: 47px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  padding: 0 10px 0 14px;
+  gap: 8px;
+}
+.status-widget-drag {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: move;
+  touch-action: none;
+}
+.status-widget-icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+.status-widget-icon:hover {
+  background: var(--muted);
+  color: var(--foreground);
+}
+.status-widget-body {
+  padding: 16px;
+  flex: 1;
+  min-height: 0;
+}
+.status-widget-current {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.status-widget-current h1 {
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+.status-widget-execution {
+  margin-top: 10px;
+  height: 51px;
+}
+.status-widget-execution p {
+  font-size: 11px;
+  color: var(--muted-foreground);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.5;
+}
+.status-widget-progress-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+.status-widget-progress {
+  height: 3px;
+  background: var(--muted);
+  margin: 7px 0;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.status-widget-progress span {
+  display: block;
+  height: 100%;
+  background: var(--primary);
+  transition: width 0.3s;
+}
+.status-widget-next {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+.status-widget-next > div {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+.status-widget-next strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 17px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.status-widget-next p {
+  margin-top: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+.status-widget-next small {
+  font-size: 10px;
+  color: var(--muted-foreground);
+}
+.status-widget-footer {
+  flex-shrink: 0;
+  padding: 0 12px 10px;
+}
+.status-widget-actions {
+  display: flex;
+  gap: 8px;
+}
+.status-widget-actions button {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 31px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.status-widget-actions button:hover {
+  background: var(--accent);
+}
+.status-widget-updated {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--muted-foreground);
+  padding-top: 9px;
+}
+.status-widget-error {
+  font-size: 10px;
+  color: var(--destructive);
+}
+.status-widget-shell[data-compact="true"] {
+  min-height: 0;
+}
+.status-widget-shell[data-compact="true"] .status-widget-header {
+  height: 34px;
+  padding: 0 6px 0 10px;
+  gap: 4px;
+}
+.status-widget-shell[data-compact="true"] .status-widget-drag {
+  font-size: 11px;
+}
+.status-widget-shell[data-compact="true"] .status-widget-drag img {
+  width: 20px;
+  height: 20px;
+}
+.status-widget-shell[data-compact="true"] .status-widget-icon {
+  width: 24px;
+  height: 24px;
+}
+.status-widget-shell[data-compact="true"] .status-widget-body {
+  padding: 10px 12px;
+}
+.status-widget-shell[data-compact="true"] .status-widget-current h1 {
+  font-size: 13px;
+}
+.status-widget-mini-next {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 7px;
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+.status-widget-mini-next span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.status-widget-message {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 7px;
+  color: var(--primary);
+  font-size: 12px;
+  cursor: pointer;
+  max-width: 100%;
+}
+.status-widget-message span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.status-widget-shell[data-compact="false"]:has(.status-widget-message) .status-widget-execution {
+  height: 40px;
+}

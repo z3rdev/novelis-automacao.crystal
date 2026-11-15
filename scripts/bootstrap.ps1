@@ -442,7 +442,7 @@ if (-not $SkipBackend) {
   Set-BootstrapStage 'backend_dependencies'
   Install-BackendPackage
   Set-BootstrapStage 'backend_imports'
-  Invoke-Checked $VenvPythonExe @('-c', 'import fastapi, uvicorn, playwright.sync_api, pyodbc, qrcode, pypdf, pypdfium2, zxingcpp') $BackendDir
+  Invoke-Checked $VenvPythonExe @('-c', 'import fastapi, uvicorn, playwright.sync_api, pyodbc, psycopg, qrcode, pypdf, pypdfium2, zxingcpp') $BackendDir
   Set-BootstrapStage 'playwright_package'
   if (-not (Test-PlaywrightDriverPackage)) {
     Repair-PlaywrightPackage

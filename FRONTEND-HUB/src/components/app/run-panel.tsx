@@ -8,7 +8,13 @@ import "./run-panel.css";
 
 export function useRun() {
   const { api, mode, baseUrl } = useApi();
-  return useQuery({ queryKey: ["run", mode, baseUrl], queryFn: () => api.getRun(), refetchInterval: (q) => (q.state.data?.state === "executando" || q.state.data?.state === "parando" ? 800 : 4000), retry: 0 });
+  return useQuery({
+    queryKey: ["run", mode, baseUrl],
+    queryFn: () => api.getRun(),
+    refetchInterval: (q) =>
+      q.state.data?.state === "executando" || q.state.data?.state === "parando" ? 800 : 4000,
+    retry: 0,
+  });
 }
 
 export function useRunActions() {
@@ -16,17 +22,43 @@ export function useRunActions() {
   const qc = useQueryClient();
   const key = ["run", mode, baseUrl];
   const inv = () => qc.invalidateQueries();
-  const start = useMutation({ mutationFn: api.startRun, onSuccess: () => { toast.success("Execução iniciada"); inv(); }, onError: (e: Error) => toast.error(e.message) });
+  const start = useMutation({
+    mutationFn: api.startRun,
+    onSuccess: (value) => {
+      qc.setQueryData(key, value);
+      toast.success("Execução iniciada");
+      inv();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
   const stop = useMutation({
     mutationFn: () => api.stopRun(),
     onMutate: async () => {
       await qc.cancelQueries({ queryKey: key });
       const previous = qc.getQueryData<RunStatus>(key);
-      qc.setQueryData<RunStatus>(key, (value) => value ? { ...value, state: "parando", stages: value.stages.map((stage) => stage.state === "executando" ? { ...stage, state: "parando" } : stage) } : value);
+      qc.setQueryData<RunStatus>(key, (value) =>
+        value
+          ? {
+              ...value,
+              state: "parando",
+              stages: value.stages.map((stage) =>
+                stage.state === "executando" ? { ...stage, state: "parando" } : stage,
+              ),
+            }
+          : value,
+      );
       return { previous };
     },
-    onSuccess: (value) => { qc.setQueryData(key, value); toast.warning(value.state === "cancelada" ? "Execução cancelada" : "Encerrando as tarefas em andamento…"); },
-    onError: (e: Error, _request, context) => { if (context?.previous) qc.setQueryData(key, context.previous); toast.error(e.message); },
+    onSuccess: (value) => {
+      qc.setQueryData(key, value);
+      toast.warning(
+        value.state === "cancelada" ? "Execução cancelada" : "Encerrando as tarefas em andamento…",
+      );
+    },
+    onError: (e: Error, _request, context) => {
+      if (context?.previous) qc.setQueryData(key, context.previous);
+      toast.error(e.message);
+    },
     onSettled: inv,
   });
   return { start, stop };
@@ -37,14 +69,50 @@ export const isBusy = (r?: RunStatus) => r?.state === "executando" || r?.state =
 export { StagesView } from "./stage-progress";
 
 export function RunSummary({ run }: { run: RunStatus }) {
-  const pct = run.total ? Math.round((run.processados / run.total) * 100) : run.state === "concluida" ? 100 : 0;
+  const done = run.workflow?.completed ?? run.processados;
+  const total = run.workflow?.total ?? run.total;
+  const pct = total ? Math.round((done / total) * 100) : run.state === "concluida" ? 100 : 0;
+  const currentLabel =
+    run.workflow?.nodes.find((node) => node.id === run.workflow?.current_node_id)?.label ??
+    (run.etapaAtual === "consulta"
+      ? (run.stages.find((stage) => stage.id === "consulta")?.atividade ?? "Consulta")
+      : run.etapaAtual
+        ? stageLabel[run.etapaAtual]
+        : "—");
   return (
-    <div className="run-summary"><div className="run-summary-grid text-sm">
-      <div><div className="text-xs text-muted-foreground">Situação</div><div className="mt-1"><RunPill s={run.state} /></div></div>
-      <div><div className="text-xs text-muted-foreground">Etapa atual</div><div className="mt-1 font-medium">{run.etapaAtual ? stageLabel[run.etapaAtual] : "—"}</div></div>
-      <div><div className="text-xs text-muted-foreground">CT-e atual</div><div className="mt-1 font-mono font-medium">{run.cteAtual ?? "—"}</div></div>
-      <div><div className="text-xs text-muted-foreground">Fluxo · início</div><div className="mt-1 font-medium" title={run.flow ? flowLabel[run.flow] : ""}>{run.flow ? flowLabel[run.flow].split(" (")[0] : "—"}</div><div className="text-xs text-muted-foreground">{fmtDateTime(run.iniciadoEm)}</div></div>
-      <div><div className="text-xs text-muted-foreground">Processados no lote</div><div className="mt-1 font-semibold tabular-nums">{run.processados} / {run.total}</div><Progress value={pct} className="mt-1 h-1.5" /></div>
-    </div></div>
+    <div className="run-summary">
+      <div className="run-summary-grid text-sm">
+        <div>
+          <div className="text-xs text-muted-foreground">Situação</div>
+          <div className="mt-1">
+            <RunPill s={run.state} />
+          </div>
+        </div>
+        <div>
+          <div className="text-xs text-muted-foreground">Etapa atual</div>
+          <div className="mt-1 font-medium">{currentLabel}</div>
+        </div>
+        <div>
+          <div className="text-xs text-muted-foreground">CT-e atual</div>
+          <div className="mt-1 font-mono font-medium">{run.cteAtual ?? "—"}</div>
+        </div>
+        <div>
+          <div className="text-xs text-muted-foreground">Fluxo · início</div>
+          <div className="mt-1 font-medium" title={run.flow ? flowLabel[run.flow] : ""}>
+            {run.workflow?.name ?? (run.flow ? flowLabel[run.flow].split(" (")[0] : "—")}
+          </div>
+          <div className="text-xs text-muted-foreground">{fmtDateTime(run.iniciadoEm)}</div>
+        </div>
+        <div>
+          <div className="text-xs text-muted-foreground">
+            {run.workflow ? "Etapas concluídas" : "Processados no lote"}
+          </div>
+          <div className="mt-1 font-semibold tabular-nums">
+            {done} / {total}
+          </div>
+          <Progress value={pct} className="mt-1 h-1.5" />
+        </div>
+      </div>
+    </div>
   );
 }

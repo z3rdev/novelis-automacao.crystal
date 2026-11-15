@@ -1,4 +1,3 @@
-import json
 import re
 from pathlib import Path
 from typing import Any
@@ -25,16 +24,20 @@ from app.automation.flows.novelis_chamados.overlay.novelis_overlay import (
     wait_if_novelis_paused,
 )
 from app.automation.flows.tarifario.steps.tarifario import TarifarioFlow
-from app.data.chamados_log import mark_cte_processed
-from app.data.chamados_reader import find_chamado_for_cte
-from app.infrastructure.json_store import read_json
 from app.services.browser_driver import BrowserDriver
 
 
-class NovelisFlow:
-    def __init__(self, cwd: Path, emit: Emit) -> None:
+from .novelis_support import NovelisSupport
+from app.services.chamado_message import render_message
+from app.services.execution_reports.models import ticket
+from app.automation.flows.novelis_chamados.controles.portal_session import open_authenticated
+
+
+class NovelisFlow(NovelisSupport):
+    def __init__(self, cwd: Path, emit: Emit, http_session=None) -> None:
         self.cwd = cwd
         self.emit = emit
+        self.http_session = http_session
 
     async def run(
         self,
@@ -64,16 +67,13 @@ class NovelisFlow:
             )
             return tarifario_rows
 
-        if browser is None:
-            raise RuntimeError("BrowserDriver obrigatório para Novelis real.")
-        page = await self._novelis_page(browser, force_new=False)
-        completed = False
-        try:
-            await self.run_chamado_flow(page, config, run_id)
-            completed = True
-        finally:
-            if completed and config.get("chamadoClosePage", False):
-                await page.close()
+        row = self._resolve_tarifario_row(config)
+        if self.http_session:
+            await self.http_session.open(row, config, send=config.get("chamadoSalvar", True))
+        else:
+            from app.services.novelis_chamado_http.session import HttpChamadosSession
+            async with HttpChamadosSession(self.cwd, config, self.emit, run_id) as session:
+                await session.open(row, config, send=config.get("chamadoSalvar", True))
         return tarifario_rows
 
     async def run_chamado_flow(self, page: Page, config: dict[str, Any], run_id: str) -> None:
@@ -97,6 +97,7 @@ class NovelisFlow:
                 run_id,
                 "novelis.chamado_exists",
                 f"CTE já consta na lista Novelis: {numero}.",
+                {"ticket": ticket(row, numero)},
             )
             self._mark_processed(config, row, "ja_existia", numero)
             await update_novelis_overlay(
@@ -109,9 +110,8 @@ class NovelisFlow:
             )
             return
 
-        await self.ensure_portal_authenticated(page, config, run_id, state)
         await emit_step(self.emit, run_id, "novelis.open_chamado", "Abrindo tela de chamado.")
-        page = await self._open_chamado_screen(page, config, state)
+        page = await self._open_chamado_screen(page, config, state, run_id)
         await self._ensure_page_cte_matches(page, row, run_id, state, "após abrir tela de chamado")
         if await self._skip_if_chamado_already_exists(page, config, row, run_id, state):
             return
@@ -141,48 +141,13 @@ class NovelisFlow:
         run_id: str,
         state: dict[str, Any] | None = None,
     ) -> None:
-        login_url = self._required_url(config, "loginUrl", "NOVELIS_LOGIN_URL", "portalUrl")
-        await emit_step(self.emit, run_id, "novelis.login", "Abrindo portal Novelis.")
-        await page.goto(login_url, wait_until="domcontentloaded")
-        if state:
-            await update_novelis_overlay(
-                page,
-                {
-                    **state,
-                    "phase": "Login",
-                    "message": "Verificando login no portal Novelis.",
-                },
-            )
-            await wait_if_novelis_paused(page, state)
-        if not await self._is_visible(page, 'input[type="password"]', timeout=5_000):
-            return
-        if state:
-            await update_novelis_overlay(
-                page,
-                {
-                    **state,
-                    "phase": "Login",
-                    "message": "Preenchendo usuário e senha no portal Novelis.",
-                },
-            )
-        await page.locator('input[type="email"], input[name="email"], #email').first.fill(str(config.get("user") or ""))
-        await page.locator('input[type="password"]').first.fill(str(config.get("pass") or ""))
-        await page.locator('button[type="submit"], input[type="submit"]').first.click()
-        await page.wait_for_timeout(2500)
-        if state:
-            await update_novelis_overlay(
-                page,
-                {
-                    **state,
-                    "phase": "Login",
-                    "message": "Login enviado. Continuando para abertura do chamado.",
-                },
-            )
+        target = config.get("dashboardUrl") or config.get("portalUrl") or "https://novelis.wtmh.com.br/portal/dashboard"
+        await open_authenticated(page, target, config, self.emit, run_id)
 
     async def _select_item(self, page: Page, item_text: str) -> None:
         await select_chamado_item(page, item_text)
 
-    async def _open_chamado_screen(self, page: Page, config: dict[str, Any], state: dict[str, Any]) -> Page:
+    async def _open_chamado_screen(self, page: Page, config: dict[str, Any], state: dict[str, Any], run_id: str) -> Page:
         if config.get("chamadoPreferDirectUrl", True):
             direct_url = self._direct_chamado_url(config)
             if not direct_url:
@@ -192,12 +157,7 @@ class NovelisFlow:
                 {**state, "phase": "Abrindo chamado", "message": "Abrindo chamado pela URL direta."},
             )
             await wait_if_novelis_paused(page, state)
-            await page.goto(direct_url, wait_until="domcontentloaded")
-            try:
-                await page.wait_for_load_state("networkidle", timeout=15_000)
-            except Exception:
-                pass
-            await page.wait_for_timeout(1000)
+            await open_authenticated(page, direct_url, config, self.emit, run_id)
             if await wait_chamado_form_ready(page, 18_000):
                 return page
             if not config.get("chamadoWorkflowFallback", False):
@@ -212,8 +172,7 @@ class NovelisFlow:
             {**state, "phase": "Abrindo chamado", "message": "Abrindo a tela de entrada do chamado."},
         )
         await wait_if_novelis_paused(page, state)
-        await page.goto(chamado_url, wait_until="domcontentloaded")
-        await page.wait_for_timeout(1500)
+        await open_authenticated(page, chamado_url, config, self.emit, run_id)
         return page
 
     async def _fill_title_message(
@@ -233,9 +192,9 @@ class NovelisFlow:
             },
         )
         await wait_if_novelis_paused(page, state)
-        numero_cte = "-".join(part for part in [row.get("filial"), row.get("serie"), row.get("documento")] if part)
-        title = f"CTE {numero_cte}" if numero_cte else str(config.get("chamadoTitulo") or "AUDITORIA DE FRETE")
-        message = self.build_chamado_message(row, str(config.get("chamadoAssinatura") or ""))
+        title = render_message(row, str(config.get("chamadoAssinatura") or ""), str(config.get("chamadoTitulo") or "CTE {cte}"))
+        template = config.get("chamadoMensagemComplementar") if self._is_complementar(row) else config.get("chamadoMensagem")
+        message = self.build_chamado_message(row, str(config.get("chamadoAssinatura") or ""), template)
         fill_result = await fill_chamado_title_message(page, title, message)
         required = await inspect_required_fields(page)
         if "Mensagem" in required.get("missing", []):
@@ -275,6 +234,9 @@ class NovelisFlow:
             raise RuntimeError("Campos de upload do chamado não apareceram após selecionar o tipo.")
 
         files = resolve_chamado_upload_files(self.cwd, config, row)
+        evidence = config.get("evidence") or {}
+        if evidence.get("requiresComprovante") and not evidence.get("comprovanteOk") and not config.get("allowMissingComprovante", False):
+            raise RuntimeError("Abertura sem comprovante desabilitada nas configurações de mensagens.")
         attempts = 1 + max(0, self._int(config.get("chamadoUploadRetryAttempts"), 1))
         retry_delay_ms = max(0, self._int(config.get("chamadoUploadRetryDelayMs"), 1500))
         await update_novelis_overlay(
@@ -341,7 +303,7 @@ class NovelisFlow:
                 run_id,
                 "novelis.chamado_exists",
                 f"CTE já está cadastrado no chamado de número {numero}. Chamado não será aberto de novo.",
-                {"row": row, "chamadoNumero": numero, "result": result},
+                {"row": row, "chamadoNumero": numero, "result": result, "ticket": ticket(row, numero)},
             )
             self._mark_processed(config, row, "ja_existia", numero)
             await update_novelis_overlay(
@@ -355,7 +317,8 @@ class NovelisFlow:
             raise RuntimeError(message)
         numero = str(result.get("numero") or "").strip()
         message = f"Chamado salvo no Novelis{f': {numero}' if numero else ''}."
-        await emit_step(self.emit, run_id, "novelis.save", message, {"numeroChamado": numero, "result": result})
+        await emit_step(self.emit, run_id, "novelis.save", message,
+                        {"numeroChamado": numero, "result": result, "ticket": ticket(row, numero)})
         self._mark_processed(config, row, "aberto", numero)
         await update_novelis_overlay(page, {**state, "phase": "Concluido", "message": message})
 
@@ -366,8 +329,9 @@ class NovelisFlow:
         return await browser.focus_page(page)
 
     def _overlay_state(self, row: dict[str, Any]) -> dict[str, str]:
-        numero_cte = "-".join(part for part in [row.get("filial"), row.get("serie"), row.get("documento")] if part)
-        return {"cte": numero_cte or str(row.get("numeroCte") or "")}
+        parts = [str(row.get(key) or "").strip() for key in ("filial", "serie", "documento")]
+        numero_cte = "-".join(parts) if all(parts) else str(row.get("numeroCte") or row.get("cte") or "")
+        return {"cte": numero_cte}
 
     async def _ensure_page_cte_matches(
         self,
@@ -416,173 +380,3 @@ class NovelisFlow:
     def _list_documentos(self, rows: list[dict[str, Any]]) -> str:
         docs = [str(row.get("documento") or "").strip() for row in rows if isinstance(row, dict)]
         return ", ".join(doc for doc in docs if doc) or "nenhum"
-
-    def build_chamado_message(self, data: dict[str, Any], assinatura: str) -> str:
-        numero_cte = "-".join(part for part in [data.get("filial"), data.get("serie"), data.get("documento")] if part)
-        rota = data.get("rota") or f"{data.get('remCidade', '')} x {data.get('desCidade', '')}".strip()
-        intro = "SEGUE O CTE COMPLEMENTAR, ACOMPANHADO DO XML E DO TARIFARIO CORRESPONDENTE."
-        if not self._is_complementar(data):
-            intro = "SEGUE O CTE, ACOMPANHADO DO XML E DO TARIFARIO CORRESPONDENTE."
-        lines = [
-            "PREZADOS,",
-            "",
-            intro,
-            "",
-            f"PERCURSO {data.get('percurso') or ''}",
-            f"TON: {data.get('ton') or data.get('tonRaw') or ''}",
-            f"ID: {data.get('id') or ''}",
-            f"ID TARIFARIO: {data.get('idTarifario') or ''}",
-            f"ROTA: {rota}",
-            f"N DO CTE: {numero_cte}",
-        ]
-        if self._is_complementar(data):
-            lines.append(f"N CTE DE ORIGEM: {data.get('cteOrigem') or ''}")
-            lines.append(f"N DO CHAMADO: {data.get('chamadoOrigem') or ''}")
-        lines.extend(["", "Att,", assinatura])
-        return "\n".join(lines)
-
-    def _resolve_tarifario_row(self, config: dict[str, Any]) -> dict[str, Any]:
-        payload = read_json(self._resolve(config.get("tarifarioOutputFile") or ""), {})
-        rows = payload.get("rows") if isinstance(payload, dict) else None
-        if not isinstance(rows, list) or not rows:
-            return {}
-        wanted = self._documento_key(config.get("currentDocumento") or config.get("documentoFilter"))
-        if not wanted:
-            return rows[0]
-        for row in rows:
-            if isinstance(row, dict) and self._documento_key(row.get("documento")) == wanted:
-                return row
-        raise RuntimeError(
-            f"Resultado do tarifário não contém o CTE esperado {wanted}. "
-            f"Encontrado(s): {self._list_documentos(rows)}. Fluxo bloqueado para evitar usar outro CTE."
-        )
-
-    async def _skip_if_chamado_already_exists(
-        self,
-        page: Page,
-        config: dict[str, Any],
-        row: dict[str, Any],
-        run_id: str,
-        state: dict[str, Any],
-    ) -> bool:
-        numero = await self._detect_existing_chamado_banner(page)
-        if not numero:
-            return False
-        await emit_warn(
-            self.emit,
-            run_id,
-            "novelis.chamado_exists",
-            f"CTE já está cadastrado no chamado de número {numero}. Chamado não será aberto de novo.",
-            {"row": row, "chamadoNumero": numero},
-        )
-        self._mark_processed(config, row, "ja_existia", numero)
-        await update_novelis_overlay(
-            page,
-            {
-                **state,
-                "phase": "Ja existe",
-                "message": f"CTE já cadastrado no chamado {numero}. Pulando.",
-            },
-        )
-        return True
-
-    async def _detect_existing_chamado_banner(self, page: Page) -> str | None:
-        try:
-            locator = page.get_by_text(re.compile(r"j[aá] est[aá] cadastrado no chamado", re.IGNORECASE)).first
-            if not await locator.is_visible(timeout=2_000):
-                return None
-            text = await locator.inner_text()
-        except Exception:
-            return None
-        match = re.search(r"(\d{6,})", text)
-        return match.group(1) if match else "numero-nao-identificado"
-
-    def _mark_processed(self, config: dict[str, Any], row: dict[str, Any], status: str, numero: str) -> None:
-        log_file = config.get("chamadosLogFile")
-        if not log_file:
-            return
-        try:
-            mark_cte_processed(
-                Path(str(log_file)),
-                row.get("filial"),
-                row.get("serie"),
-                row.get("documento"),
-                status,
-                numero,
-                row.get("cteId") or "",
-            )
-        except Exception:
-            pass
-
-    def _find_existing_chamado(
-        self,
-        config: dict[str, Any],
-        row: dict[str, Any],
-    ) -> dict[str, Any] | None:
-        chamados_hit = find_chamado_for_cte(
-            self.cwd,
-            config.get("relatorioCteXmlJsonFile"),
-            row.get("filial"),
-            row.get("serie"),
-            row.get("documento"),
-            config.get("chamadosSnapshotFile"),
-            row.get("cteId"),
-        )
-        if chamados_hit:
-            return {"chamadoNumero": chamados_hit.get("chamado")}
-
-        lista_file = config.get("listaJsonFile") or config.get("listaOutputFile")
-        if not lista_file:
-            return None
-        payload = read_json(self._resolve(lista_file), {})
-        rows = payload.get("rows") or payload.get("items") if isinstance(payload, dict) else None
-        if not isinstance(rows, list):
-            return None
-        target = self._digits(row.get("documento"))
-        for item in rows:
-            text = json.dumps(item, ensure_ascii=False)
-            if target and target in self._digits(text):
-                return item
-        return None
-
-    async def _is_visible(self, page: Page, selector: str, timeout: int = 3_000) -> bool:
-        return await self._locator_visible(page.locator(selector).first, timeout)
-
-    async def _locator_visible(self, locator, timeout: int = 3_000) -> bool:
-        try:
-            return await locator.is_visible(timeout=timeout)
-        except Exception:
-            return False
-
-    def _is_complementar(self, data: dict[str, Any]) -> bool:
-        if data.get("isCteComplementarFrete"):
-            return True
-        return bool(re.search(r"CTE\s+COMPLEMENTAR\s+DE\s+FRETE", str(data.get("observacao") or ""), re.I))
-
-    def _digits(self, value: Any) -> str:
-        return "".join(ch for ch in str(value or "") if ch.isdigit())
-
-    def _int(self, value: Any, fallback: int) -> int:
-        try:
-            return int(str(value).strip())
-        except (TypeError, ValueError):
-            return fallback
-
-    def _resolve(self, value: str) -> Path:
-        path = Path(str(value or ""))
-        return path if path.is_absolute() else self.cwd / path
-
-    def _required_url(self, config: dict[str, Any], key: str, env_key: str, *fallback_keys: str) -> str:
-        value = str(config.get(key) or "").strip()
-        for fallback_key in fallback_keys:
-            value = value or str(config.get(fallback_key) or "").strip()
-        if not value:
-            raise RuntimeError(f"Configure {env_key} no BACKEND/.env para abrir o Novelis.")
-        return value
-
-    def _direct_chamado_url(self, config: dict[str, Any]) -> str:
-        configured = str(config.get("chamadoDiretoUrl") or "").strip()
-        if configured:
-            return configured
-        portal = str(config.get("portalUrl") or "").strip().rstrip("/")
-        return f"{portal}/chamado/" if portal else ""

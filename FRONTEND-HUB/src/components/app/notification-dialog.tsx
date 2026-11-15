@@ -11,7 +11,8 @@ import type { HubNotification } from "@/services";
 import { fmtDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-export const noticeLevels = { info: "Comunicado", warning: "Atenção", critical: "Urgente" };
+import { NotificationMessage } from "./notification-message";
+export { noticeLevels } from "./notification-message";
 
 interface Props {
   open: boolean;
@@ -23,6 +24,7 @@ interface Props {
   saving: boolean;
   error: boolean;
   onRetry(): void;
+  onReadAll?(): void;
 }
 
 export function NotificationDialog({
@@ -35,6 +37,7 @@ export function NotificationDialog({
   saving,
   error,
   onRetry,
+  onReadAll,
 }: Props) {
   const selected =
     items.find((item) => item.id === selectedId) ?? items.find((item) => !item.read_at) ?? items[0];
@@ -46,8 +49,9 @@ export function NotificationDialog({
             <Bell className="h-5 w-5" />
             Notificações
           </DialogTitle>
-          <DialogDescription>Comunicados da equipe de desenvolvimento.</DialogDescription>
+          <DialogDescription>Comunicados da equipe de desenvolvimento. {items.filter((item) => !item.read_at).length} não lida(s).</DialogDescription>
         </DialogHeader>
+        {onReadAll && items.some((item) => !item.read_at) && <Button className="justify-self-start" variant="outline" size="sm" disabled={saving} onClick={onReadAll}><CheckCheck />Marcar todas como lidas</Button>}
         {error && (
           <div role="alert" className="space-y-2 text-sm text-destructive">
             <p>Não foi possível consultar o servidor de notificações ou o cache de leitura.</p>
@@ -91,39 +95,7 @@ export function NotificationDialog({
                 </button>
               ))}
             </nav>
-            <article className="flex min-w-0 flex-col gap-3">
-              <p
-                className={cn(
-                  "text-xs font-semibold",
-                  selected.severity === "critical"
-                    ? "text-destructive"
-                    : selected.severity === "warning"
-                      ? "text-warning"
-                      : "text-muted-foreground",
-                )}
-              >
-                {noticeLevels[selected.severity]}
-              </p>
-              <h3 className="break-words text-xl font-semibold text-primary">{selected.title}</h3>
-              <p className="text-xs text-muted-foreground">
-                {selected.author} · {fmtDateTime(selected.created_at)}
-              </p>
-              <p className="max-h-72 overflow-y-auto whitespace-pre-wrap break-words text-sm leading-relaxed">
-                {selected.body}
-              </p>
-              <div className="mt-auto flex flex-wrap items-center gap-2 pt-4">
-                <Button
-                  onClick={() => onRead(selected.id)}
-                  disabled={saving || Boolean(selected.read_at)}
-                >
-                  <CheckCheck />
-                  {selected.read_at ? "Mensagem lida" : "Marcar como lida"}
-                </Button>
-                <Button variant="outline" onClick={() => onOpenChange(false)}>
-                  Fechar
-                </Button>
-              </div>
-            </article>
+            <NotificationMessage item={selected} onRead={onRead} saving={saving} onClose={() => onOpenChange(false)} />
           </div>
         )}
       </DialogContent>

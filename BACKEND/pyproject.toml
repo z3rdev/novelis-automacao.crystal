@@ -18,10 +18,14 @@ dependencies = [
   "pytesseract>=0.3.13",
   "psutil>=6.0.0",
   "boto3>=1.40,<2",
+  "psycopg[binary]>=3.2,<4",
+  "pypdf>=5,<7",
+  "pillow>=10.0.0",
+  "tzdata>=2025.2",
 ]
 
 [project.optional-dependencies]
-dacte = ["brazilfiscalreport[dacte]==1.4.0", "qrcode[pil]>=8.2,<9", "pypdf>=5,<7", "pypdfium2>=4.30,<6", "zxing-cpp>=3.0,<4"]
+dacte = ["brazilfiscalreport[dacte]==1.4.0", "qrcode[pil]>=8.2,<9", "pypdfium2>=4.30,<6", "zxing-cpp>=3.0,<4"]
 dev = [
   "pytest>=8.2.0",
   "ruff>=0.6.0",
@@ -31,7 +35,8 @@ dev = [
 include = ["app*"]
 
 [tool.setuptools.package-data]
-"app.services.crystal_reports" = ["*.ps1"]
+"app.services.crystal_reports" = ["*.ps1", "diagnostic_assets/*.css", "diagnostic_assets/*.js", "diagnostic_assets/*.html"]
+"app.resources" = ["device-naming.json", "municipios/*.json", "municipios/LICENSE"]
 
 [tool.ruff]
 line-length = 100

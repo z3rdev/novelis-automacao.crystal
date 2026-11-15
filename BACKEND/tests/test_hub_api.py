@@ -52,6 +52,52 @@ class FakeConfig:
         return self.values.get(key, "")
 
 
+def test_http_opening_option_reaches_the_app_workflow(setup):
+    client, _, automation, _ = setup
+    response = client.post("/api/hub/runs", json={"flow": "somente_chamados", "ctes": ["8-10-1559"], "chamadoHttp": True})
+    assert response.status_code == 200
+    assert automation.requests[-1].flow == "pendentes"
+    assert automation.requests[-1].execution_scope == "chamados"
+    assert automation.requests[-1].manual_ctes == "8-10-1559"
+    assert response.json()["flow"] == "somente_chamados"
+
+
+def test_sidebar_counts_only_read_aggregates_without_importing_sources(setup, monkeypatch):
+    from unittest.mock import Mock
+
+    client, hub, _, _ = setup
+    repository = SimpleNamespace(enabled=True, counts=Mock(return_value={"em_analise": 264, "solucionado": 10807}))
+    monkeypatch.setattr(hub.chamados_catalog, "repository", repository)
+    sync = Mock(side_effect=AssertionError("Menu must not import source files"))
+    monkeypatch.setattr(hub.chamados_catalog, "sync", sync)
+    response = client.get("/api/hub/chamados/summary")
+    assert response.status_code == 200
+    assert response.json() == {"counts": {"em_analise": 264, "solucionado": 10807}}
+    repository.counts.assert_called_once_with()
+    sync.assert_not_called()
+
+
+def test_sidebar_counts_do_not_expose_database_errors(setup, monkeypatch):
+    from unittest.mock import Mock
+
+    from app.infrastructure.chamados_postgres import CommunicationUnavailable
+
+    client, hub, _, _ = setup
+    repository = SimpleNamespace(enabled=True, counts=Mock(side_effect=CommunicationUnavailable("fixture-private")))
+    monkeypatch.setattr(hub.chamados_catalog, "repository", repository)
+    response = client.get("/api/hub/chamados/summary")
+    assert response.status_code == 503
+    assert "fixture-private" not in response.text
+
+
+@pytest.mark.parametrize("flow,ctes", [("completo", ["8-10-1559"]), ("somente_chamados", []), ("somente_chamados", ["8-10-1559", "1-10-26103"])])
+def test_http_compatibility_flag_accepts_full_flow_and_batches(setup, flow, ctes):
+    client, _, automation, _ = setup
+    response = client.post("/api/hub/runs", json={"flow": flow, "ctes": ctes, "chamadoHttp": True})
+    assert response.status_code == 200
+    assert automation.requests[-1].flow == "pendentes"
+
+
 @pytest.fixture
 def setup(tmp_path):
     settings = SimpleNamespace(backend_root=tmp_path / "BACKEND")
@@ -159,8 +205,19 @@ def test_pdf_lookup_stays_stable_when_new_jobs_arrive(setup, tmp_path):
 
 def test_config_is_whitelisted_persistent_and_no_browser_is_started(setup):
     client, hub, _, _ = setup
+    from app.services.master_access import MasterAccess
+    from app.services.session_audit import SessionAudit
+    audit = SessionAudit(hub.settings.backend_root / "audit.sqlite", hub.settings.backend_root / "shared-audit.sqlite",
+        identity=lambda: {"windows_user": "TEST\\operator", "computer_name": "TEST-PC", "mac_addresses": []})
+    actor = audit.login("Test operator", {"status": "idle"})
+    client.app.state.session_audit = audit
+    client.app.state.master_access = MasterAccess(hub.store)
+    assert client.get("/api/hub/config").status_code == 401
+    headers = {"X-Operator-Session": actor["id"]}
+    assert client.get("/api/hub/config", headers=headers).status_code == 403
+    client.app.state.master_access.setup("test-only-not-production", actor, can_setup=True)
     assert client.get("/api/hub/automation/browser").json()["ativo"] is False
-    response = client.put("/api/hub/config", json=[{"fields": [
+    response = client.put("/api/hub/config", headers=headers, json=[{"fields": [
         {"key": "NOVELIS_SQLITE_PATH", "value": "elsewhere.sqlite"},
         {"key": "DB_PASSWORD", "value": "must-not-be-saved"},
         {"key": "CRYSTAL_QR_PROVIDER", "value": "python"}]}])

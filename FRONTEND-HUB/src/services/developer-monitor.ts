@@ -1,7 +1,10 @@
+import type { DeviceClassification } from "./device-classification";
+
 export interface MonitoredDevice {
   id: string;
   machine_id: string;
   computer_name: string;
+  classification?: DeviceClassification;
   windows_user: string;
   mac_addresses: string[];
   version: string | null;
@@ -23,6 +26,7 @@ export interface MonitoredSession {
   operator_name: string;
   windows_user: string;
   computer_name: string;
+  classification?: DeviceClassification;
   mac_addresses: string[];
   login_at: string;
   last_seen_at: string;

@@ -1,0 +1,10 @@
+{
+  "repository": "https://github.com/kelvins/municipios-brasileiros",
+  "commit": "503e2f70bbf1b4b7ec0b1f68b09086ccc38fe861",
+  "license": "MIT",
+  "sha256": {
+    "municipios.json": "b14992cbd4a2a6b383f2165cd9b1a997df5da4d8081017bd2c83582f9996bf64",
+    "estados.json": "2d738d2438a0917387c59d4264502d80cf995cbe6622aed608657dff995cc7ff",
+    "LICENSE": "c8254a78fe3edcb841e0df79bcd217e2626c2a13f9374dd8a51729d88dc0bc88"
+  }
+}

@@ -34,5 +34,5 @@ export function Section({ title, actions, children, className }: { title: ReactN
 
 /** Contêiner de tabela com rolagem e cabeçalho fixo */
 export function TableBox({ children, maxH = "max-h-[60vh]" }: { children: ReactNode; maxH?: string }) {
-  return <div className={cn("overflow-auto rounded-md border [&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:bg-muted", maxH)}>{children}</div>;
+  return <div className={cn("relative isolate max-w-full overflow-auto rounded-md border [&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:bg-muted", maxH)}>{children}</div>;
 }

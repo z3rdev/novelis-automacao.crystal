@@ -27,6 +27,7 @@ class AutomationService:
         event_bus: EventBus,
         run_state: RunState,
         browser: BrowserDriver,
+        run_reports=None,
     ) -> None:
         self.settings = settings
         self.legacy_config = legacy_config
@@ -34,6 +35,7 @@ class AutomationService:
         self.event_bus = event_bus
         self.run_state = run_state
         self.browser = browser
+        self.run_reports = run_reports
         self._control_lock = asyncio.Lock()
         self._cancellation: RunCancellation | None = None
         self._task: asyncio.Task[None] | None = None
@@ -99,7 +101,13 @@ class AutomationService:
                 kind="run.started",
                 payload=self._run_started_payload(request),
             )
-            if not request.dry_run or flow_name == "pendentes":
+            if self.run_reports:
+                try:
+                    await self.run_reports.begin(await self.run_state.get(), request)
+                except Exception:  # noqa: BLE001 - reporting must not interrupt the fiscal workflow.
+                    await self.event_bus.publish("Registro do relatório da execução indisponível.",
+                        run_id=run_id, level="warn", kind="execution_report.pending")
+            if flow_name != "chamado-http" and (not request.dry_run or flow_name == "pendentes"):
                 browser = BrowserDriver(self.settings, headless_override=True) if consulta_headless else self.browser
                 if consulta_headless:
                     await self.event_bus.publish(
@@ -137,7 +145,7 @@ class AutomationService:
             if cancelled:
                 cancellation.request_cancel()
                 await cancellation.drain()
-            if browser and (cancelled or flow_name in {"pendentes", "consulta-pendentes", "consulta"}):
+            if browser and (cancelled or flow_name in {"pendentes", "consulta-pendentes", "consulta", "buscar-chamados", "workflow"}):
                 try:
                     await browser.close()
                     await self.event_bus.publish("Navegador da automação fechado.", run_id=run_id, kind="browser.closed")
@@ -157,6 +165,19 @@ class AutomationService:
                 await self.run_state.update(status="cancelled", message="Execução cancelada.")
                 await self.event_bus.publish("Execução cancelada.", run_id=run_id,
                                              level="warn", kind="run.cancelled")
+            if flow_name == "workflow" and request.workflow:
+                from app.services.workflow_finalization import finalize_workflow
+                await finalize_workflow(request, await self.run_state.get(), self.event_bus, self.run_reports)
+            elif self.run_reports:
+                try:
+                    report = await self.run_reports.finish(await self.run_state.get())
+                    if report:
+                        await self.event_bus.publish("Relatório de chamados da execução gerado.", run_id=run_id,
+                            kind="execution_report.created", payload={"report_id": report["id"],
+                            "opened_count": report["opened_count"], "status": report["status"]})
+                except Exception:  # noqa: BLE001 - redact storage errors; fiscal results stay unchanged.
+                    await self.event_bus.publish("Não foi possível finalizar o relatório. Os eventos da execução foram preservados.",
+                        run_id=run_id, level="warn", kind="execution_report.pending")
             if self._task is asyncio.current_task():
                 self._task = None
 

@@ -1,7 +1,8 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DeveloperMonitorPage } from "./developer-monitor";
+import { selectOption } from "@/test/select-option";
 import type { DeveloperMonitor, MonitoredDevice, MonitoredSession } from "@/services";
 
 const fixtures = vi.hoisted(() => ({
@@ -115,6 +116,44 @@ function show() {
 }
 
 describe("console do desenvolvedor", () => {
+  it("filtra setor e filial de computadores anteriores e mostra a identificação no painel lateral", async () => {
+    fixtures.api.getDeveloperMonitor.mockResolvedValue({
+      ...data,
+      devices: [
+        { ...device, computer_name: "NB-TI-VIN-07" },
+        { ...device, id: "purchase", computer_name: "WKS-COMP-RJ02", machine_id: "purchase" },
+      ],
+    });
+    show();
+    expect(await screen.findByText("NB-TI-VIN-07")).toBeVisible();
+    expect(screen.getByText("WKS-COMP-RJ02")).toBeVisible();
+    await selectOption("Filtrar setor", "Compras");
+    expect(screen.queryByText("NB-TI-VIN-07")).toBeNull();
+    await selectOption("Filtrar filial", "Viana");
+    expect(screen.queryByText("WKS-COMP-RJ02")).toBeNull();
+    await selectOption("Filtrar filial", "Rio de Janeiro");
+    fireEvent.click(screen.getByRole("button", { name: "Detalhes de WKS-COMP-RJ02" }));
+    const details = within(screen.getByRole("dialog"));
+    expect(details.getByText("Compras")).toBeVisible();
+    expect(details.getByText("Rio de Janeiro")).toBeVisible();
+    expect(details.getByText("Workstation")).toBeVisible();
+  });
+  it("busca pelo nome do setor sem depender de acentuação", async () => {
+    fixtures.api.getDeveloperMonitor.mockResolvedValue({
+      ...data,
+      devices: [
+        { ...device, computer_name: "NB-MAN-VIN-01" },
+        { ...device, id: "other", computer_name: "NB-TI-VIN-07" },
+      ],
+    });
+    show();
+    await screen.findByText("NB-MAN-VIN-01");
+    fireEvent.change(screen.getByLabelText("Buscar usuários e dispositivos"), {
+      target: { value: "manutencao" },
+    });
+    expect(screen.getByText("NB-MAN-VIN-01")).toBeVisible();
+    expect(screen.queryByText("NB-TI-VIN-07")).toBeNull();
+  });
   it("restringe a consulta dos usuários quando o modo desenvolvedor está desativado", async () => {
     fixtures.api.getDeveloperConfig.mockResolvedValue({ enabled: false });
     show();
@@ -135,7 +174,7 @@ describe("console do desenvolvedor", () => {
     fireEvent.change(screen.getByLabelText("Buscar usuários e dispositivos"), {
       target: { value: "" },
     });
-    fireEvent.change(screen.getByLabelText("Filtrar conexão"), { target: { value: "offline" } });
+    await selectOption("Filtrar conexão", "Offline / sem sinal");
     expect(screen.queryByText("TEST-PC", { exact: true })).toBeNull();
     expect(screen.getByText("Último estado recebido")).toBeVisible();
   });
@@ -146,7 +185,7 @@ describe("console do desenvolvedor", () => {
     expect(dialog).toHaveTextContent("C:\\Cargo Hub");
     expect(dialog).toHaveTextContent("00:11:22:33:44:55");
     expect(dialog).toHaveTextContent("0.1.35-r2");
-    expect(screen.getByText(/estar offline não confirma desinstalação/)).toBeVisible();
+    expect(screen.queryByText("Console do desenvolvedor")).not.toBeInTheDocument();
   });
   it("informa indisponibilidade do registro compartilhado sem inventar usuários", async () => {
     fixtures.api.getDeveloperMonitor.mockRejectedValue(

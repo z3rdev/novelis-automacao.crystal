@@ -9,6 +9,7 @@
 @source "../src";
 @import "tw-animate-css";
 @import "./styles/brand.css";
+@import "./styles/appearance.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -69,8 +70,8 @@
   --color-warning-foreground: var(--warning-foreground);
   --color-info: var(--info);
   --color-info-foreground: var(--info-foreground);
-  --font-sans: "IBM Plex Sans", system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --font-sans: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "Cascadia Mono", Consolas, ui-monospace, monospace;
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -85,7 +86,7 @@
   --brand-navy: oklch(0.264046 0.067832 255.3434);
   --brand-teal: oklch(0.703753 0.123018 182.5025);
   --brand-gray: oklch(0.551019 0.023361 264.3637);
-  --radius: 0.625rem;
+  --radius: 0.5rem;
   --background: oklch(0.975 0.004 240);
   --foreground: var(--brand-navy);
   --card: oklch(1 0 0);
@@ -177,4 +178,20 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
   }
+}
+
+.fluent-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 1em;
+  height: 1em;
+  font-family: "Segoe Fluent Icons", "Segoe MDL2 Assets";
+  font-size: 16px;
+  font-weight: 400;
+  font-style: normal;
+  line-height: 1;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
 }

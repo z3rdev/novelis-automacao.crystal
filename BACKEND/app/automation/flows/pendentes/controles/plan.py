@@ -6,21 +6,26 @@ from pathlib import Path
 from typing import Any
 
 from app.automation.cancellation import check_cancelled, run_blocking
-from app.automation.flows.flow_events import Emit, emit_warn
+from app.automation.flows.flow_events import Emit, emit_step, emit_warn
+from app.automation.flows.pendentes.controles.plan_reuse import rows_plan
 from app.data.chamados_log import read_processed_ctes
 from app.data.chamados_reader import load_chamado_rows, search_chamado_rows
 from app.data.consulta_reader import read_consulta_rows
 from app.domain.models import RunStartRequest
+from app.domain.cte_authorization import authorization_status
 from app.infrastructure.json_store import read_json
-from app.services.cte_xml_files import matching_xml_files
 from app.services.cte_pdf_files import find_pdf_evidence
+from app.services.cte_xml_files import matching_xml_files
+from app.services.document_index import DocumentIndex
+from app.services.document_scan import scan_evidence
 
 
 class PendentesPlanBuilder:
-    def __init__(self, cwd: Path, emit: Emit, *, cache_directories: bool = False) -> None:
+    def __init__(self, cwd: Path, emit: Emit, *, cache_directories: bool = False, document_index=None) -> None:
         self.cwd = cwd
         self.emit = emit
         self._directory_files = {} if cache_directories else None
+        self._document_index = document_index or DocumentIndex()
 
     async def build(
         self,
@@ -31,9 +36,13 @@ class PendentesPlanBuilder:
         request: RunStartRequest,
         run_id: str,
         chamado_config: dict[str, Any] | None = None,
+        *,
+        check_files: bool = True,
     ) -> dict[str, Any]:
         target_row = self._request_row(request, rodopar_config)
         rows, source_file, sheet_name = await self._input_rows(config, rodopar_config, run_id, target_row)
+        if check_files:
+            await emit_step(self.emit, run_id, "pendentes.files_check", "Arquivos: verificando PDF, XML e comprovantes nas pastas.", {"querySource": "arquivos"})
         normalized_rows = [row for row in (self._normalize_row(item, rodopar_config) for item in rows) if row]
         if target_row:
             target_key = self._row_key(target_row)
@@ -57,7 +66,11 @@ class PendentesPlanBuilder:
             xml_config,
             comprovante_config,
             request.execution_scope == "xml" and bool(request.manual_ctes or request.manual_spreadsheet),
+            check_files,
         )
+
+        if not check_files:
+            return rows_plan(normalized_rows, checked, source_file, sheet_name, total_consultados)
 
         faltando_pdf = [item["cte"] for item in checked if not item["evidence"]["pdfFile"]]
         faltando_xml = [item["cte"] for item in checked if not item["evidence"]["xmlFile"]]
@@ -100,8 +113,10 @@ class PendentesPlanBuilder:
         xml_config: dict[str, Any],
         comprovante_config: dict[str, Any],
         explicit_xml: bool = False,
+        check_files: bool = True,
     ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         check_cancelled()
+        normalized_rows = [row for row in normalized_rows if authorization_status(row) != "N"]
         if target_row or explicit_xml:
             # Modo teste / campos manuais: the user explicitly named this one CTE, so
             # none of the "already done" bookkeeping below (pending-row status, the
@@ -124,8 +139,14 @@ class PendentesPlanBuilder:
             check_cancelled()
             cte = self._cte_key(normalized)
             row = {**normalized, "cte": cte, "key": self._row_key(normalized)}
-            evidence = self.resolve_evidence(row, rodopar_config, xml_config, comprovante_config)
-            checked.append({"cte": cte, "row": row, "evidence": evidence})
+            checked.append({"cte": cte, "row": row})
+        if not check_files:
+            return normalized_rows, checked
+        evidence_rows = scan_evidence(
+            self, [item["row"] for item in checked], rodopar_config, xml_config, comprovante_config
+        )
+        for item, evidence in zip(checked, evidence_rows):
+            item["evidence"] = evidence
         return normalized_rows, checked
 
     async def _input_rows(
@@ -180,22 +201,40 @@ class PendentesPlanBuilder:
     ) -> dict[str, Any]:
         pdf_file = find_pdf_evidence(
             self._resolve(rodopar_config.get("downloadTargetDir") or "captures/rodopar-pdfs-downloads"), row,
+            files=self._document_index.files if self._document_index else None,
+            validator=self._document_index.valid_pdf if self._document_index else None,
         )
         xml_directory = self._resolve(xml_config.get("downloadDir") or "captures/cte-fazenda-downloads")
-        xml_files = matching_xml_files(xml_directory, row, entries=(
-            self._all_files(xml_directory, {".xml"}) if self._directory_files is not None else None))
+        xml_files = matching_xml_files(
+            xml_directory,
+            row,
+            entries=self._all_files(xml_directory, {".xml"}) if self._directory_files is not None else None,
+            files=self._document_index.files if self._document_index else None,
+            first_only=True,
+            **({"validator": self._document_index.validate_xml} if self._document_index else {}),
+        )
         comprovante_files = self._files_for_row(
             row,
             [self._resolve(comprovante_config.get("targetDir") or "captures/tarifario-downloads")],
             {".pdf", ".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff", ".webp"},
         )
+        from app.services.chat_files import published_documents
+        cte = "-".join(self._part(row.get(key)) for key in ("filial", "serie", "documento"))
+        bundle = published_documents(self._resolve(comprovante_config["sourceDir"]), cte) if comprovante_config.get("sourceDir") else {}
+        for kind, prefix in (("guia", "GNR"), ("comprovante", "CMP")):
+            if bundle.get(kind):
+                comprovante_files = [file for file in comprovante_files if not self._matches_prefix(file.name, [prefix])]
+                comprovante_files.append(bundle[kind])
+        comprovante_files = list(dict.fromkeys(comprovante_files))
         zip_prefixes = self._prefixes(comprovante_config.get("zipPrefixes") or comprovante_config.get("prefixes"))
         comprovante_zip_files = [
             file for file in comprovante_files if self._matches_prefix(file.name, zip_prefixes)
         ]
+        if all(bundle.get(kind) for kind in ("guia", "comprovante", "combined")):
+            comprovante_zip_files = [bundle["combined"]]
         requires_comprovante = self._requires_comprovante(row)
-        has_guia = any(self._matches_prefix(file.name, ["GNR"]) for file in comprovante_files)
-        has_comprovante_file = any(self._matches_prefix(file.name, ["CMP"]) for file in comprovante_files)
+        has_guia = bool(bundle.get("guia")) or any(self._matches_prefix(file.name, ["GNR"]) for file in comprovante_files)
+        has_comprovante_file = bool(bundle.get("comprovante")) or any(self._matches_prefix(file.name, ["CMP"]) for file in comprovante_files)
         comprovante_ok = not requires_comprovante or (has_guia and has_comprovante_file)
         return {
             "pdfFile": str(pdf_file or ""),
@@ -233,11 +272,11 @@ class PendentesPlanBuilder:
         doc = self._part(row.get("documento"))
         for directory in roots:
             check_cancelled()
-            if not directory.exists():
+            if self._document_index is None and not directory.exists():
                 continue
             files.extend(self._matched_files(directory, doc, extensions))
             cte_dir = directory / f"cte-{self._slug(doc)}"
-            if cte_dir.exists():
+            if self._document_index is not None or cte_dir.exists():
                 files.extend(self._all_files(cte_dir, extensions))
         return self._dedupe_files(files)
 
@@ -248,6 +287,8 @@ class PendentesPlanBuilder:
         return [item for item in entries if doc in self._part(item.name)]
 
     def _all_files(self, directory: Path, extensions: set[str]) -> list[Path]:
+        if self._document_index is not None:
+            return self._document_index.files(directory, extensions)
         cache_key = (directory, tuple(sorted(extensions)))
         if self._directory_files is not None and cache_key in self._directory_files:
             return self._directory_files[cache_key]
@@ -375,7 +416,7 @@ class PendentesPlanBuilder:
         out: list[Path] = []
         seen: set[str] = set()
         for file in files:
-            key = str(file.resolve(strict=False)).lower()
+            key = str(file if self._document_index else file.resolve(strict=False)).lower()
             if key in seen:
                 continue
             seen.add(key)
@@ -395,7 +436,9 @@ class PendentesPlanBuilder:
         report_path = config.get("relatorioCteXmlJsonFile")
         snapshot_path = config.get("chamadosSnapshotFile")
         try:
-            chamado_rows = load_chamado_rows(self.cwd, report_path, snapshot_path)
+            from app.services.chamados_catalog import current_catalog
+            catalog = current_catalog(self.cwd)
+            chamado_rows = catalog.opened_identities(rows) if catalog else load_chamado_rows(self.cwd, report_path, snapshot_path)
         except Exception:
             return rows
         kept = []

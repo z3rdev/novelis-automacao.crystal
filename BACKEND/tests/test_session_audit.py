@@ -23,12 +23,13 @@ def test_login_records_trusted_identity_and_replicates_once(tmp_path):
     service = audit(tmp_path)
     session = service.login("Operador de teste", {"status": "idle"})
     assert session["windows_user"] == identity()["windows_user"]
+    assert session["operator_name"] == "tester"
     assert session["mac_addresses"] == identity()["mac_addresses"]
     assert session["login_at"] and session["automation_status"] == "stopped"
     assert service.sync() == 1
     assert service.sync() == 0
     with sqlite3.connect(service.shared_path) as db:
-        assert db.execute("SELECT operator_name,computer_name FROM sessions").fetchone() == ("Operador de teste", "TEST-PC")
+        assert db.execute("SELECT operator_name,computer_name FROM sessions").fetchone() == ("tester", "TEST-PC")
         assert json.loads(db.execute("SELECT mac_addresses FROM sessions").fetchone()[0]) == identity()["mac_addresses"]
 
 

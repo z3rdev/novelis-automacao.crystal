@@ -107,9 +107,12 @@ def normalize_cte_origem(value: str | None) -> str | None:
 
 def parse_observacao(value: Any) -> dict[str, Any]:
     observacao = re.sub(r"\s+", " ", as_text(value).replace("_x000D_", " ")).strip()
-    percurso = re.search(r"\bPERCURSO\s+(\d+)\b", observacao, re.I)
-    item_id = re.search(r"\bID\s+(\d+)\b", observacao, re.I)
-    ton = re.search(r"\bTON\s+([0-9]+(?:[.,][0-9]+)?)\b", observacao, re.I)
+    percurso = re.search(r"\bPERCURSO\s*[:=]?\s*(\d+)\b", observacao, re.I)
+    item_id = re.search(r"\bID\s*[:=]?\s*(\d+)\b", observacao, re.I)
+    ton = re.search(r"\bTON(?:S|ELADAS?)?\s*[:=]?\s*([0-9]+(?:[.,][0-9]+)?)\b", observacao, re.I)
+    if ton is None:
+        ton = re.search(r"(?<![\w.,-])([0-9]+(?:[.,][0-9]+)?)\s*TON(?:S|ELADAS?)?\b", observacao, re.I)
+    tariff = re.search(r"\bID\s*(?:DO\s+)?TARIF[ÁA]RIO\s*[:=]?\s*(\d+)\b", observacao, re.I)
     origem = re.search(
         r"\bCTE\s+(?:DE\s+)?ORIGEM\b\s*[:|-]?\s*([0-9][0-9\s./-]*?)(?=\s*(?:\||;|$))",
         observacao,
@@ -121,6 +124,7 @@ def parse_observacao(value: Any) -> dict[str, Any]:
         "id": item_id.group(1) if item_id else None,
         "ton": parse_decimal(ton.group(1)) if ton else None,
         "tonRaw": ton.group(1) if ton else None,
+        "idTarifarioObservacao": tariff.group(1) if tariff else None,
         "isCteComplementarFrete": bool(re.search(r"\bCTE\s+COMPLEMENTAR\s+DE\s+FRETE\b", observacao, re.I)),
         "cteOrigem": normalize_cte_origem(origem.group(1) if origem else None),
     }

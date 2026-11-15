@@ -2,11 +2,10 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "desktop",
   "description": "Recursos locais da janela principal; SQLite e automacoes permanecem no backend.",
-  "windows": [
-    "main"
-  ],
+  "windows": ["main"],
   "permissions": [
     "core:default",
+    "core:window:allow-set-theme",
     "dialog:allow-open",
     "dialog:allow-save",
     "opener:allow-open-path",
@@ -15,6 +14,9 @@
       "allow": [
         {
           "url": "https://github.com/z3rdev"
+        },
+        {
+          "url": "https://novelis.wtmh.com.br/portal/chamado/*"
         },
         {
           "url": "http://127.0.0.1:8000/*"

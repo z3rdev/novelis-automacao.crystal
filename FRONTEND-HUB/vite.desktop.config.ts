@@ -8,6 +8,16 @@ import { fileURLToPath, URL } from "node:url";
 export default defineConfig({
   plugins: [tanstackRouter({ target: "react", autoCodeSplitting: false }), react(), tailwindcss()],
   resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
-  server: { host: "127.0.0.1", port: 1420, strictPort: true },
+  server: {
+    host: "127.0.0.1",
+    port: 1420,
+    strictPort: true,
+    proxy:
+      process.env.NOVELIS_PREVIEW_ROLE === "finance"
+        ? {
+            "/api": { target: "http://127.0.0.1:18037", changeOrigin: true },
+          }
+        : undefined,
+  },
   build: { outDir: "dist-desktop", emptyOutDir: true, target: "es2022" },
 });

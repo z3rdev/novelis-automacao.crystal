@@ -11,6 +11,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { noticeLevels } from "@/components/app/notification-dialog";
 import { fmtDateTime } from "@/lib/format";
+import { AppSelect } from "@/components/app/fields/app-select";
+import { AppDateTimePicker } from "@/components/app/fields/app-date-time-picker";
 
 export const Route = createFileRoute("/notificacoes-dev")({
   head: () => ({ meta: [{ title: "Central de notificações · Cargo Hub" }] }),
@@ -120,28 +122,22 @@ function DeveloperNotifications() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="notice-severity">Prioridade</Label>
-              <select
+              <AppSelect
+                label="Prioridade"
                 id="notice-severity"
                 className="h-10 w-full rounded-md border bg-background px-3 text-sm"
                 value={severity}
-                onChange={(event) =>
-                  setSeverity(event.target.value as NotificationInput["severity"])
-                }
-              >
-                {Object.entries(noticeLevels).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
+                onValueChange={(value) => setSeverity(value as NotificationInput["severity"])}
+                options={Object.entries(noticeLevels).map(([value, label]) => ({ value, label }))}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="notice-expires">Expiração opcional</Label>
-              <Input
+              <AppDateTimePicker
+                label="Expiração opcional"
                 id="notice-expires"
-                type="datetime-local"
                 value={expires}
-                onChange={(event) => setExpires(event.target.value)}
+                onChange={setExpires}
               />
             </div>
           </div>
@@ -157,7 +153,7 @@ function DeveloperNotifications() {
       <Section title="Notificações publicadas">
         {feed.isError && (
           <p role="alert" className="text-sm text-destructive">
-              Não foi possível consultar o servidor de notificações.
+            Não foi possível consultar o servidor de notificações.
           </p>
         )}
         {feed.data?.length === 0 && (

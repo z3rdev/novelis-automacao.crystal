@@ -1,5 +1,11 @@
 import "@testing-library/jest-dom/vitest";
 
+// Radix uses browser APIs that jsdom does not implement.
+HTMLElement.prototype.scrollIntoView = () => {};
+HTMLElement.prototype.hasPointerCapture = () => false;
+HTMLElement.prototype.setPointerCapture = () => {};
+HTMLElement.prototype.releasePointerCapture = () => {};
+
 Object.defineProperty(window, "scrollTo", {
   writable: true,
   value: () => {},

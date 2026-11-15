@@ -10,18 +10,26 @@ def pdf_target(directory: Path, row: dict) -> Path:
     return directory / f"cte-{int(row['documento'])}" / f"CTE_{cte}.pdf"
 
 
-def find_pdf_evidence(directory: Path, row: dict) -> Path | None:
+def find_pdf_evidence(directory: Path, row: dict, *, files=None, validator=None) -> Path | None:
     cte = "-".join(str(int(row[key])) for key in ("filial", "serie", "documento"))
     folder = pdf_target(directory, row).parent
     legacy = directory / f"cte_{int(row['documento'])}"
     for base in (folder, directory, legacy):
+        available = {path.name.casefold(): path for path in files(base, {".pdf"})} if files else None
         for name in (f"CTE_{cte}.pdf", f"{cte}.pdf", f"cte_{cte.replace('-', '_')}.pdf"):
             check_cancelled()
-            path = base / name
+            path = available.get(name.casefold()) if available is not None else base / name
+            if path is None:
+                continue
             try:
-                if path.is_file() and path.stat().st_size > 5:
+                if validator is not None:
+                    if validator(path):
+                        return path
+                    continue
+                if available is not None or path.is_file() and path.stat().st_size > 5:
                     with path.open("rb") as file:
-                        if file.read(5) == b"%PDF-":
+                        header = file.read(6)
+                        if len(header) > 5 and header.startswith(b"%PDF-"):
                             return path
             except OSError:
                 continue

@@ -1,0 +1,154 @@
+.widget-activity-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 15px;
+  color: var(--muted-foreground);
+}
+.status-widget-current[data-tone="running"] .widget-activity-icon {
+  color: var(--primary);
+}
+.status-widget-current[data-tone="error"] .widget-activity-icon {
+  color: var(--destructive);
+}
+.status-widget-current[data-tone="success"] .widget-activity-icon {
+  color: var(--success);
+}
+.status-widget-current[data-tone="warning"] .widget-activity-icon {
+  color: var(--warning);
+}
+.widget-activity-title {
+  animation: widget-status-enter 220ms ease-out;
+}
+.widget-activity-track {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  overflow: hidden;
+  display: none;
+}
+.widget-activity-track > span {
+  display: block;
+  height: 100%;
+  background: var(--primary);
+}
+.status-widget-current[data-tone="running"] .widget-activity-track,
+.status-widget-current[data-motion="error"] .widget-activity-track {
+  display: block;
+}
+.status-widget-current[data-tone="running"] .widget-activity-track > span {
+  width: 30%;
+  animation: widget-activity-travel 2.5s ease-in-out infinite;
+}
+.status-widget-current[data-motion="download"] .widget-activity-icon {
+  animation: widget-download 1.4s ease-in-out infinite;
+}
+.status-widget-current[data-motion="generate"] .widget-activity-icon,
+.status-widget-current[data-motion="connect"] .widget-activity-icon {
+  animation: widget-spin 2.2s linear infinite;
+}
+.status-widget-current[data-motion="verify"] .widget-activity-icon {
+  animation: widget-search 1.8s ease-in-out infinite;
+}
+.status-widget-current[data-motion="validate"] .widget-activity-icon {
+  animation: widget-validate 1.5s ease-in-out infinite;
+}
+.status-widget-current[data-motion="send"] .widget-activity-icon {
+  animation: widget-send 1.6s ease-in-out infinite;
+}
+.status-widget-current[data-motion="success"] .widget-activity-icon {
+  animation: widget-status-enter 280ms ease-out;
+}
+.status-widget-current[data-motion="error"] .widget-activity-icon,
+.status-widget-current[data-motion="error"] .widget-activity-track > span {
+  background-color: transparent;
+  animation: widget-error 3s ease-in-out infinite;
+}
+.status-widget-current[data-motion="error"] .widget-activity-track > span {
+  background: var(--destructive);
+}
+@keyframes widget-status-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes widget-activity-travel {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(440%);
+  }
+}
+@keyframes widget-download {
+  0%,
+  100% {
+    transform: translateY(-2px);
+    opacity: 0.65;
+  }
+  55% {
+    transform: translateY(3px);
+    opacity: 1;
+  }
+}
+@keyframes widget-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes widget-search {
+  0%,
+  100% {
+    transform: translateX(-2px) rotate(-8deg);
+  }
+  50% {
+    transform: translateX(2px) rotate(8deg);
+  }
+}
+@keyframes widget-validate {
+  0%,
+  100% {
+    transform: scale(0.9);
+    opacity: 0.65;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+}
+@keyframes widget-send {
+  0%,
+  100% {
+    transform: translateX(-2px);
+    opacity: 0.65;
+  }
+  50% {
+    transform: translateX(3px);
+    opacity: 1;
+  }
+}
+@keyframes widget-error {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .status-widget-shell .widget-activity-icon,
+  .status-widget-shell .widget-activity-title,
+  .status-widget-shell .widget-activity-track > span {
+    animation: none !important;
+  }
+  .status-widget-current[data-tone="running"] .widget-activity-track > span {
+    width: 100%;
+  }
+}

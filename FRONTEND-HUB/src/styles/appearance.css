@@ -1,0 +1,66 @@
+:root {
+  color-scheme: light;
+}
+:root.dark {
+  color-scheme: dark;
+  --background: oklch(0.18 0.016 255);
+  --foreground: oklch(0.94 0.008 250);
+  --card: oklch(0.225 0.018 255);
+  --card-foreground: var(--foreground);
+  --popover: oklch(0.25 0.018 255);
+  --popover-foreground: var(--foreground);
+  --primary: oklch(0.77 0.115 182.5);
+  --primary-foreground: var(--brand-navy);
+  --secondary: oklch(0.29 0.022 255);
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.28 0.019 255);
+  --muted-foreground: oklch(0.75 0.018 250);
+  --accent: oklch(0.77 0.115 182.5 / 12%);
+  --accent-foreground: var(--foreground);
+  --border: oklch(0.36 0.021 255);
+  --input: oklch(0.39 0.021 255);
+  --ring: var(--brand-teal);
+  --success: oklch(0.78 0.13 155);
+  --success-foreground: oklch(0.19 0.02 155);
+  --warning: oklch(0.82 0.14 85);
+  --warning-foreground: oklch(0.88 0.105 85);
+  --info: oklch(0.78 0.1 200);
+  --info-foreground: oklch(0.19 0.02 200);
+  --destructive: oklch(0.78 0.13 20);
+  --destructive-foreground: oklch(0.19 0.02 20);
+  --sidebar: oklch(0.195 0.026 255);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--brand-teal);
+}
+.dark .developer-credit {
+  color: var(--muted-foreground);
+}
+.dark .developer-credit a {
+  color: var(--foreground);
+}
+.dark .login-device-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: oklch(0.12 0.03 255 / 55%);
+}
+.dark .device-card {
+  background: oklch(0.225 0.018 255 / 93%);
+  color: var(--foreground);
+  border-color: var(--border);
+  box-shadow: none;
+}
+.dark .login-form-panel .device-card {
+  background: var(--background);
+}
+.dark .workflow-canvas {
+  --xy-background-color-default: var(--background);
+  --xy-background-pattern-dots-color-default: oklch(0.45 0.02 255);
+}
+.dark .workflow-card {
+  box-shadow: 0 2px 5px oklch(0.1 0 0 / 15%);
+}
+.dark .react-flow__attribution {
+  background: var(--card);
+  color: var(--muted-foreground);
+}

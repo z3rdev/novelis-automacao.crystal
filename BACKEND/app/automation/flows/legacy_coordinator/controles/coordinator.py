@@ -38,6 +38,11 @@ class LegacyCoordinator:
         browser: BrowserDriver | None,
     ) -> Any:
         flow_name = request.flow.strip().lower()
+        if flow_name == "workflow":
+            from app.automation.flows.scheduled_workflow.runner import ScheduledWorkflowRunner
+            return await ScheduledWorkflowRunner(
+                self.settings, self.legacy_config, self.repository, self.event_bus.publish
+            ).run(browser, request, run_id)
         if flow_name in LEGACY_RODOPAR_FLOWS:
             require_legacy_rodopar(self.legacy_config)
         if flow_name == "pre-passo":
@@ -70,6 +75,10 @@ class LegacyCoordinator:
                 request,
                 run_id,
             )
+        if flow_name == "buscar-chamados":
+            from app.automation.flows.novelis_relatorio.steps.novelis_relatorio_cte_xml import NovelisRelatorioCteXmlFlow
+            return await NovelisRelatorioCteXmlFlow(self.settings.backend_root.parent, self.event_bus.publish).run(
+                browser, {**self.legacy_config.novelis(), "relatorioCteXmlSkipIfFreshToday": False}, [], run_id)
         if flow_name == "comprovante-local":
             return await self._comprovante_local().run(
                 self.legacy_config.comprovante_local(),
@@ -83,6 +92,9 @@ class LegacyCoordinator:
                 request,
                 run_id,
             )
+        if flow_name == "chamado-http":
+            from app.automation.flows.novelis_chamados.steps.chamado_http import run_http_test
+            return await run_http_test(self.settings, self.legacy_config, request, run_id, self.event_bus.publish)
         if flow_name in {"pendentes", "consulta-pendentes", "consulta"}:
             return await self._pendentes().run(browser, request, run_id)
         if flow_name == "integrado":
@@ -159,4 +171,5 @@ class LegacyCoordinator:
         return ComprovanteLocalFlow(self.legacy_config.cwd(), self.event_bus.publish)
 
     def _chamado_novelis(self) -> ChamadoNovelisFlow:
-        return ChamadoNovelisFlow(self.legacy_config.cwd(), self.event_bus.publish)
+        from app.services.tariffs.audit import TariffAuditService
+        return ChamadoNovelisFlow(self.legacy_config.cwd(), self.event_bus.publish, TariffAuditService(self.legacy_config))

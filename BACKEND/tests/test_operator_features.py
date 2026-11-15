@@ -88,6 +88,8 @@ def test_notification_expiration_and_text_validation(system):
 
 @pytest.mark.parametrize("flow,days_back,sql_days,scope", [
     ("consulta", 0, 0, "full"), ("somente_pdf", 2, 3, "pdf"), ("completo", 5, 6, "full"),
+    ("somente_xml", 2, 3, "xml"), ("somente_comprovantes", 0, 0, "comprovantes"),
+    ("buscar_chamados", 5, 6, "full"),
 ])
 def test_schedule_runs_at_eight_once_with_the_requested_flow_and_period(system, flow, days_back, sql_days, scope):
     value = system.engine.save(ScheduleInput(name="Rotina das oito", flow=flow, days_back=days_back), system.actor)
@@ -100,7 +102,7 @@ def test_schedule_runs_at_eight_once_with_the_requested_flow_and_period(system, 
         request = system.automation.requests[0]
         assert request.pendentes_sql_days_back == sql_days
         assert request.execution_scope == scope
-        assert request.flow == ("consulta-pendentes" if flow == "consulta" else "pendentes")
+        assert request.flow == {"consulta": "consulta-pendentes", "buscar_chamados": "buscar-chamados"}.get(flow, "pendentes")
         assert not request.dry_run
         last = system.repository.list(system.actor["windows_user"])[0]["last_run"]
         assert last["state"] == "running"
@@ -268,3 +270,80 @@ def test_http_notifications_and_schedule_configuration(system, tmp_path):
         assert client.put(f"/api/hub/schedules/{identifier}", json={**body, "enabled": False}, headers=headers).json()["enabled"] is False
         assert client.delete(f"/api/hub/schedules/{identifier}", headers=headers).status_code == 204
         assert client.get("/api/hub/schedules", headers=headers).json()["schedules"] == []
+
+
+def test_custom_schedule_persists_and_dispatches_the_exact_workflow(system):
+    graph = {"name": "PDF da manhã", "nodes": [
+        {"id": "sql", "kind": "sql", "position": {"x": 0, "y": 0},
+         "options": {"start_days_ago": 2, "end_days_ago": 0}},
+        {"id": "pdf", "kind": "pdf", "position": {"x": 240, "y": 0}}],
+        "edges": [{"source": "sql", "target": "pdf"}]}
+    row = system.engine.save(ScheduleInput(name="Rotina por nós", flow="personalizado", workflow=graph), system.actor)
+    assert row["workflow"]["nodes"][0]["options"]["start_days_ago"] == 2
+
+    async def exercise():
+        system.clock[0] = system.clock[0].replace(hour=8, minute=0)
+        await system.engine.tick()
+        await system.engine.tick()
+        assert len(system.automation.requests) == 1
+        request = system.automation.requests[0]
+        assert request.flow == "workflow"
+        assert [node.kind for node in request.workflow.ordered_nodes()] == ["sql", "pdf"]
+        assert request.workflow.nodes[0].options.start_days_ago == 2
+    asyncio.run(exercise())
+
+
+def test_manual_schedule_runs_saved_custom_workflow_even_disabled_and_keeps_next_occurrence(system):
+    graph = {"name": "Consulta salva", "nodes": [{"id": "sql", "kind": "sql", "position": {"x": 0, "y": 0},
+                "options": {"start_days_ago": 2, "end_days_ago": 0}}]}
+    value = system.engine.save(ScheduleInput(name="Manual", flow="personalizado", workflow=graph, enabled=False), system.actor)
+
+    async def exercise():
+        result = await system.engine.run_now(value["id"], system.actor)
+        assert result["state"] == "executando"
+        request = system.automation.requests[-1]
+        assert request.workflow.name == "Consulta salva"
+        assert request.workflow.nodes[0].options.start_days_ago == 2
+        assert system.repository.list(system.actor["windows_user"])[0]["last_run"] is None
+        await system.automation.state.update(status="completed")
+        system.engine.save(ScheduleInput(name="Manual", flow="personalizado", workflow=graph), system.actor, value["id"])
+        before = system.engine.list(system.actor["windows_user"])["schedules"][0]["next_run_at"]
+        await system.engine.run_now(value["id"], system.actor)
+        assert system.engine.list(system.actor["windows_user"])["schedules"][0]["next_run_at"] == before
+        await system.automation.state.update(status="completed")
+        system.clock[0] = system.clock[0].replace(hour=8, minute=0)
+        await system.engine.tick()
+        assert len(system.automation.requests) == 3
+    asyncio.run(exercise())
+
+
+def test_manual_schedule_api_requires_ownership_and_rejects_an_active_run(system):
+    value = system.engine.save(ScheduleInput(name="Iniciar agora", days_back=2), system.actor)
+    app = FastAPI()
+    app.include_router(router, prefix="/api")
+    app.state.session_audit, app.state.scheduler = system.audit, system.engine
+    headers = {"X-Operator-Session": system.actor["id"]}
+    with TestClient(app) as client:
+        endpoint = f"/api/hub/schedules/{value['id']}/run"
+        assert client.post(endpoint).status_code == 401
+        assert client.post("/api/hub/schedules/unknown/run", headers=headers).status_code == 404
+        response = client.post(endpoint, headers=headers)
+        assert response.status_code == 200
+        assert system.automation.requests[-1].pendentes_sql_days_back == 3
+        assert client.post(endpoint, headers=headers).status_code == 409
+        assert len(system.automation.requests) == 1
+        other = system.audit.login("Outro", {"status": "idle"})
+        from unittest.mock import patch
+        with patch.object(system.audit, "session", return_value={**other, "windows_user": "DOMAIN\\different"}):
+            assert client.post(endpoint, headers=headers).status_code == 404
+
+
+def test_editing_workflow_reactivates_schedule_at_the_edit_time(system):
+    graph = {"name": "Consulta", "nodes": [{"id": "sql", "kind": "sql", "position": {"x": 0, "y": 0}}]}
+    body = ScheduleInput(name="Visual", flow="personalizado", workflow=graph)
+    first = system.engine.save(body, system.actor)
+    system.clock[0] += timedelta(minutes=2)
+    graph["nodes"][0]["options"] = {"start_days_ago": 2}
+    second = system.engine.save(ScheduleInput(name="Visual", flow="personalizado", workflow=graph), system.actor, first["id"])
+    assert second["activated_at"] != first["activated_at"]
+    assert second["revision"] == first["revision"] + 1

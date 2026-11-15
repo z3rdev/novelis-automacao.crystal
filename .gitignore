@@ -58,3 +58,4 @@ BACKEND/=6.0.0
 BACKEND/ocr_sanity.png
 BACKEND/credentials.json
 BACKEND/CONFIG.dev
+**/communication.private.json

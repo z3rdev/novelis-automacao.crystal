@@ -1,9 +1,10 @@
 import asyncio
 import sqlite3
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 
 from app.api.deps import require_operator_session
+from app.domain.automation_errors import AutomationBusyError
 from app.domain.hub_features import NotificationInput, ScheduleInput
 from app.services.developer_monitor import snapshot as monitor_snapshot
 from app.services.releases.config import DeveloperConfig
@@ -38,7 +39,9 @@ async def developer_monitor(request: Request):
     try:
         return await asyncio.to_thread(monitor_snapshot, request.app.state.session_audit)
     except (OSError, RuntimeError, sqlite3.Error):
-        raise HTTPException(503, "Não foi possível consultar o registro compartilhado de usuários e dispositivos.") from None
+        raise HTTPException(
+            503, "Não foi possível consultar o registro compartilhado de usuários e dispositivos."
+        ) from None
 
 
 @router.get("/notifications")
@@ -62,7 +65,9 @@ async def read_notification(identifier: str, request: Request):
 async def developer_notifications(request: Request):
     actor = await developer(request)
     try:
-        return await asyncio.to_thread(notifications(request).list, actor["windows_user"], developer=True)
+        return await asyncio.to_thread(
+            notifications(request).list, actor["windows_user"], developer=True
+        )
     except ValueError as exc:
         raise HTTPException(503, str(exc)) from None
 
@@ -109,11 +114,57 @@ async def edit_schedule(identifier: str, body: ScheduleInput, request: Request):
     try:
         return await asyncio.to_thread(scheduler(request).save, body, actor, identifier)
     except KeyError:
-        raise HTTPException(404, "Agendamento não encontrado neste computador e conta Windows.") from None
+        raise HTTPException(
+            404, "Agendamento não encontrado neste computador e conta Windows."
+        ) from None
+
+
+@router.post("/schedules/{identifier}/run")
+async def run_schedule_now(identifier: str, request: Request):
+    actor = await require_operator_session(request)
+    try:
+        return await scheduler(request).run_now(identifier, actor)
+    except KeyError:
+        raise HTTPException(
+            404, "Agendamento não encontrado neste computador e conta Windows."
+        ) from None
+    except AutomationBusyError as exc:
+        raise HTTPException(409, str(exc)) from None
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from None
+    except (OSError, RuntimeError, sqlite3.Error):
+        raise HTTPException(
+            503,
+            "Não foi possível iniciar a rotina. Verifique a conexão e os registros da operação.",
+        ) from None
+
+
+@router.get("/schedules/{identifier}/history")
+async def schedule_history(
+    identifier: str,
+    request: Request,
+    page: int = Query(0, ge=0),
+    size: int = Query(20, ge=1, le=100),
+):
+    actor = await require_operator_session(request)
+    try:
+        return await asyncio.to_thread(
+            scheduler(request).repository.history,
+            identifier,
+            actor["windows_user"],
+            page=page,
+            size=size,
+        )
+    except KeyError:
+        raise HTTPException(
+            404, "Agendamento não encontrado neste computador e conta Windows."
+        ) from None
 
 
 @router.delete("/schedules/{identifier}", status_code=204)
 async def remove_schedule(identifier: str, request: Request):
     actor = await require_operator_session(request)
-    if not await asyncio.to_thread(scheduler(request).repository.remove, identifier, actor["windows_user"]):
+    if not await asyncio.to_thread(
+        scheduler(request).repository.remove, identifier, actor["windows_user"]
+    ):
         raise HTTPException(404, "Agendamento não encontrado neste computador e conta Windows.")

@@ -4,6 +4,7 @@ import json
 from datetime import UTC, datetime
 
 from app.infrastructure.session_audit_db import connection
+from app.services.device_classification import classify_computer_name
 
 ONLINE_TIMEOUT_SECONDS = 90
 
@@ -76,6 +77,9 @@ def snapshot(audit, now=None) -> dict:
     truncated = truncated or len(devices) > 1000
     devices = devices[:1000]
     sessions.sort(key=lambda item: (item["online"], item["last_seen_at"]), reverse=True)
+    # Reclassify historical/legacy hostnames too; old clients need no migration.
+    for item in (*devices, *sessions):
+        item["classification"] = classify_computer_name(item["computer_name"])
     online = [item for item in devices if item["online"]]
     return {"checked_at": now.isoformat(), "online_timeout_seconds": ONLINE_TIMEOUT_SECONDS,
             "source": "shared_session_audit", "truncated": truncated,

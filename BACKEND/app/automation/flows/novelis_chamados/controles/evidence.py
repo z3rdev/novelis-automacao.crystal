@@ -1,6 +1,8 @@
 import re
 import shutil
 import zipfile
+import os
+from uuid import uuid4
 from pathlib import Path
 from typing import Any
 
@@ -128,11 +130,19 @@ def _build_zip(cwd: Path, config: dict[str, Any], row: dict[str, Any], xml_file:
     zip_dir.mkdir(parents=True, exist_ok=True)
     zip_name = f"tarifa-{_slug(row.get('idTarifario') or _cte(row) or 'sem-id')}.zip"
     zip_path = zip_dir / zip_name
-    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as archive:
-        archive.write(xml_file, xml_file.name)
-        for extra in extras:
-            if extra and extra.is_file():
+    from app.services.chat_files import verify_managed_document
+    available = [extra for extra in extras if extra and extra.is_file()]
+    for extra in available:
+        verify_managed_document(extra)
+    temporary = zip_path.with_name(f".{zip_path.name}.{uuid4().hex}.tmp")
+    try:
+        with zipfile.ZipFile(temporary, "w", zipfile.ZIP_DEFLATED) as archive:
+            archive.write(xml_file, xml_file.name)
+            for extra in available:
                 archive.write(extra, extra.name)
+        os.replace(temporary, zip_path)
+    finally:
+        temporary.unlink(missing_ok=True)
     return zip_path if zip_path.is_file() else None
 
 

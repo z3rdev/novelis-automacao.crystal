@@ -43,7 +43,7 @@ def factory_environment(raw: str) -> str:
             value = "false"
         elif key == "PENDENTES_PDF_SOURCE":
             value = "crystal"
-        elif SECRET.search(key) or re.match(r"^(?:CONSULTA|CRYSTAL)_DB_(?:SERVER|HOST|PORT|INSTANCE|DATABASE)$", key):
+        elif SECRET.search(key) or re.match(r"^(?:CONSULTA|CRYSTAL)_DB_(?:SERVER|HOST|PORT|INSTANCE|DATABASE)$|^CHAMADOS_PG_(?:HOST|DATABASE|SSLROOTCERT)$", key):
             value = ""
         elif re.match(r"^[A-Za-z]:[\\/]", unquoted) or unquoted.startswith("\\\\"):
             value = ""

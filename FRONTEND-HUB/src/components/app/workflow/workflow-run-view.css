@@ -1,0 +1,125 @@
+.workflow-run {
+  min-width: 0;
+  container-type: inline-size;
+}
+.workflow-run-heading,
+.workflow-run-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 7rem 5rem;
+  column-gap: 1.5rem;
+  align-items: center;
+}
+.workflow-run-heading {
+  padding: 0 12px 8px 40px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.workflow-run-heading > :last-child {
+  text-align: right;
+}
+.workflow-run-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.workflow-run-row {
+  position: relative;
+  min-height: 44px;
+  padding: 9px 12px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+}
+.workflow-run-label {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 12px;
+}
+.workflow-run-marker {
+  margin-top: 2px;
+  color: var(--muted-foreground);
+}
+.workflow-run-title {
+  display: inline;
+  overflow-wrap: anywhere;
+  font-weight: 400;
+}
+.workflow-run-period {
+  margin-left: 12px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.workflow-run-detail {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.workflow-run-state {
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.workflow-run-count {
+  display: grid;
+  justify-items: end;
+  gap: 5px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.workflow-run-count progress {
+  width: 64px;
+  height: 3px;
+  accent-color: var(--brand-teal);
+}
+.workflow-run-active {
+  background: var(--muted);
+}
+.workflow-run-active::before {
+  content: "";
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 0;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--brand-teal);
+}
+.workflow-run-active .workflow-run-title {
+  font-weight: 600;
+}
+.workflow-run-row[data-state="concluida"] .workflow-run-marker {
+  color: var(--success);
+}
+.workflow-run-row[data-state="falhou"] .workflow-run-marker,
+.workflow-run-row[data-state="falhou"] .workflow-run-state {
+  color: var(--destructive);
+}
+.workflow-run-row[data-state="parando"] .workflow-run-marker {
+  color: var(--warning-foreground);
+}
+@container (max-width: 34rem) {
+  .workflow-run-heading {
+    display: none;
+  }
+  .workflow-run-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 12px;
+    row-gap: 4px;
+  }
+  .workflow-run-label {
+    grid-column: 1 / -1;
+  }
+  .workflow-run-period {
+    display: block;
+    margin: 3px 0 0;
+  }
+  .workflow-run-state {
+    padding-left: 28px;
+  }
+  .workflow-run-count {
+    grid-column: 2;
+    grid-row: 2;
+  }
+}

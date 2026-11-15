@@ -21,6 +21,8 @@ SELECT
   C.FREVAL,
   C.NMGNRE,
   C.CTE_ID,
+  C.CTEAUT,
+  C.CTEPRO,
   C.LOCCOL,
   C.LOCENT,
   C.OBSCON,
@@ -40,6 +42,8 @@ FROM VW_RECEBER_DELLMAR AS R
       RC.FREVAL,
       RC.NMGNRE,
       RC.CTE_ID,
+      RC.CTEAUT,
+      RC.CTEPRO,
       RC.LOCCOL,
       RC.LOCENT,
       RC.OBSCON,
@@ -48,6 +52,7 @@ FROM VW_RECEBER_DELLMAR AS R
     FROM RODCON AS RC
     WHERE RC.CODCON = R.DOCUMENTO
       AND RC.CODFIL = R.FILIAL
+      AND RC.SERCON = R.SERIE
       AND R.TIPO = 'CTE'
   ) AS C
 WHERE
@@ -70,6 +75,8 @@ SELECT TOP (1)
   C.FREVAL,
   C.NMGNRE,
   C.CTE_ID,
+  C.CTEAUT,
+  C.CTEPRO,
   C.LOCCOL,
   C.LOCENT,
   C.OBSCON,
@@ -89,6 +96,8 @@ FROM VW_RECEBER_DELLMAR AS R
       RC.FREVAL,
       RC.NMGNRE,
       RC.CTE_ID,
+      RC.CTEAUT,
+      RC.CTEPRO,
       RC.LOCCOL,
       RC.LOCENT,
       RC.OBSCON,
@@ -97,6 +106,7 @@ FROM VW_RECEBER_DELLMAR AS R
     FROM RODCON AS RC
     WHERE RC.CODCON = R.DOCUMENTO
       AND RC.CODFIL = R.FILIAL
+      AND RC.SERCON = R.SERIE
       AND R.TIPO = 'CTE'
   ) AS C
 WHERE R.FILIAL = ?
@@ -115,7 +125,9 @@ class SqlConsultaResult:
     source: dict[str, Any]
 
 
-def fetch_last_5_days_rows(config: dict[str, Any], days: int = 5) -> SqlConsultaResult:
+def fetch_last_5_days_rows(config: dict[str, Any], days: int = 5, start_date=None, end_date=None) -> SqlConsultaResult:
+    from app.domain.consultation_period import validate_period
+    validate_period(start_date, end_date)
     try:
         import pyodbc
     except ImportError as exc:
@@ -133,6 +145,8 @@ def fetch_last_5_days_rows(config: dict[str, Any], days: int = 5) -> SqlConsulta
     for attempt in range(2):
         check_cancelled()
         try:
+            if start_date:
+                return _fetch_last_days(pyodbc, connection_string, config, days_back, start_date, end_date)
             return _fetch_last_days(pyodbc, connection_string, config, days_back)
         except Exception as exc:
             if attempt or not _should_retry_sql(exc):
@@ -140,7 +154,7 @@ def fetch_last_5_days_rows(config: dict[str, Any], days: int = 5) -> SqlConsulta
 
 
 def _fetch_last_days(
-    pyodbc: Any, connection_string: str, config: dict[str, Any], days_back: int,
+    pyodbc: Any, connection_string: str, config: dict[str, Any], days_back: int, start_date=None, end_date=None,
 ) -> SqlConsultaResult:
     # A killed SQL session cannot be reused. Each bounded retry owns a connection.
     connection = pyodbc.connect(
@@ -152,12 +166,20 @@ def _fetch_last_days(
         connection.timeout = max(1, int(config.get("requestTimeoutMs") or 20_000) // 1000)
         group = _optional_int(config.get("pagGrupoClienteCod"))
         with cancellable_cursor(cursor):
-            cursor.execute(SQL_LAST_N_DAYS, 1 - days_back if days_back else 0, group, group)
+            if start_date:
+                query = SQL_LAST_N_DAYS.replace(
+                    "DATEADD(DAY, ?, CAST(GETDATE() AS DATE))\n    AND CAST(GETDATE() AS DATE)",
+                    "CONVERT(date, ?, 112) AND CONVERT(date, ?, 112)")
+                # The legacy SQL Server ODBC driver rejects SQL_TYPE_DATE (HYC00).
+                # Bind plain ISO basic-date strings, retaining server-side parameters.
+                cursor.execute(query, start_date.strftime("%Y%m%d"), end_date.strftime("%Y%m%d"), group, group)
+            else:
+                cursor.execute(SQL_LAST_N_DAYS, 1 - days_back if days_back else 0, group, group)
             columns = [column[0] for column in cursor.description]
             raw_rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
         return SqlConsultaResult(
             rows=_dedupe_rows(raw_rows),
-            source_file=f"SQL_ULTIMOS_{days_back}_DIAS",
+            source_file=f"SQL_PERIODO_{start_date}_{end_date}" if start_date else f"SQL_ULTIMOS_{days_back}_DIAS",
             source=_source_meta(),
         )
     finally:
@@ -281,6 +303,7 @@ def _connection_string(
 
 
 def _dedupe_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    from app.data.cte_fields import enrich
     out: list[dict[str, Any]] = []
     seen: set[str] = set()
     for row in rows:
@@ -293,7 +316,7 @@ def _dedupe_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
             continue
         seen.add(key)
         out.append(
-            {
+            enrich({
                 "filial": filial,
                 "serie": serie,
                 "documento": documento,
@@ -305,7 +328,7 @@ def _dedupe_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "cteId": mapped.get("CTE_ID") or "",
                 "__sql": {"enriched": True, **{key: _json_value(value) for key, value in mapped.items()}},
                 **{key: _json_value(value) for key, value in mapped.items()},
-            }
+            })
         )
     return out
 
@@ -354,6 +377,8 @@ def _map_db_row(row: dict[str, Any]) -> dict[str, Any]:
         "FREVAL": row.get("FREVAL"),
         "NMGNRE": row.get("NMGNRE") or "",
         "CTE_ID": row.get("CTE_ID") or "",
+        "CTEAUT": row.get("CTEAUT"),
+        "CTEPRO": row.get("CTEPRO"),
         "LOCCOL": row.get("LOCCOL") or "",
         "LOCENT": row.get("LOCENT") or "",
         "OBSCON": row.get("OBSCON") or "",

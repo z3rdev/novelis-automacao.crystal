@@ -2,7 +2,10 @@ from datetime import datetime, timezone
 from typing import Any, Literal
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
+from datetime import date
+from app.domain.consultation_period import validate_period
+from app.domain.scheduled_workflow import ScheduledWorkflow
 
 
 StepAction = Literal["click", "fill", "wait", "screenshot", "shortcut", "ocr_click"]
@@ -144,8 +147,9 @@ class ManualSpreadsheetInput(BaseModel):
 
 class RunStartRequest(BaseModel):
     flow: str = "pendentes"
+    workflow: ScheduledWorkflow | None = None
     dry_run: bool = True
-    execution_scope: Literal["full", "documents", "pdf", "xml"] = "full"
+    execution_scope: Literal["full", "documents", "pdf", "xml", "comprovantes", "chamados"] = "full"
     max_steps: int | None = Field(default=None, ge=1)
     sample_filial: str = ""
     sample_serie: str = ""
@@ -156,6 +160,15 @@ class RunStartRequest(BaseModel):
     manual_spreadsheet: ManualSpreadsheetInput | None = None
     pendentes_sql_days_back: int | None = Field(default=None, ge=0, le=90)
     pendentes_skip_chamado_missing_comprovante: bool = True
+    consulta_data_inicio: date | None = None
+    consulta_data_fim: date | None = None
+
+    @model_validator(mode="after")
+    def check_period(self):
+        validate_period(self.consulta_data_inicio, self.consulta_data_fim)
+        if self.flow == "workflow" and self.workflow is None:
+            raise ValueError("Informe o fluxo personalizado.")
+        return self
 
 
 class ManualConfirmationRequest(BaseModel):

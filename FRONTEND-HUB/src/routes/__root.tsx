@@ -7,6 +7,7 @@ import {
   HeadContent,
   Scripts,
   type ErrorComponentProps,
+  useRouterState,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 
@@ -21,6 +22,11 @@ import { StartupScreen } from "@/components/app/startup-screen";
 import { UpdateProvider } from "@/components/app/update-provider";
 import { AppDialogs } from "@/components/app/app-dialogs";
 import { NotificationProvider } from "@/components/app/notification-provider";
+import { WorkflowCompletionMonitor } from "@/components/app/workflow/workflow-completion";
+import { AppearanceProvider } from "@/components/app/appearance-provider";
+import { StatusWidgetBridge } from "@/components/app/widget/status-widget-bridge";
+import { ChatMonitor } from "@/components/app/chat/chat-monitor";
+import { appearanceBootScript } from "@/services/appearance";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
@@ -104,9 +110,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
       { rel: "icon", href: "/favicon-32x32.png", type: "image/png", sizes: "32x32" },
       { rel: "icon", href: "/favicon-16x16.png", type: "image/png", sizes: "16x16" },
@@ -122,8 +125,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 function RootShell({ children }: { children: ReactNode }) {
   if (import.meta.env.MODE === "desktop") return <>{children}</>;
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: appearanceBootScript }} />
         <HeadContent />
       </head>
       <body>
@@ -135,18 +139,22 @@ function RootShell({ children }: { children: ReactNode }) {
 }
 
 function RootComponent() {
+  const inboxOpen = useRouterState({ select: (state) => state.location.pathname === "/notificacoes" });
   const { queryClient } = Route.useRouteContext();
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <AppearanceProvider><QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <ApiProvider>
+        <StatusWidgetBridge />
         <StartupScreen>
         <TooltipProvider delayDuration={200}>
-          <SessionGate><AppDialogs><NotificationProvider><UpdateProvider><SidebarProvider>
+          <SessionGate><AppDialogs><NotificationProvider inboxOpen={inboxOpen}><UpdateProvider><SidebarProvider>
+            <WorkflowCompletionMonitor />
+            <ChatMonitor />
             <div className="flex min-h-screen w-full">
               <AppSidebar />
-              <div className="flex min-w-0 flex-1 flex-col">
+              <div className="relative isolate flex min-w-0 flex-1 flex-col overflow-x-clip">
                 <AppHeader />
                 <main className="min-w-0 flex-1">
                   <Outlet />
@@ -158,6 +166,6 @@ function RootComponent() {
         </TooltipProvider>
         </StartupScreen>
       </ApiProvider>
-    </QueryClientProvider>
+    </QueryClientProvider></AppearanceProvider>
   );
 }

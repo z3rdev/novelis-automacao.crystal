@@ -56,12 +56,15 @@ def test_xml_batch_downloads_every_missing_cte_and_skips_existing(monkeypatch, t
     download = AsyncMock()
     monkeypatch.setattr(xml_batch, "XmlSefazFlow", lambda *a: SimpleNamespace(run=download))
     ctes = ["2-10-10402", "1-10-23167", "11-10-397"]
-    plan = {"checked": [{"cte": cte} for cte in ctes], "faltandoXml": ctes[1:]}
+    plan = {"checked": [{"cte": cte, "row": {"cteId": KEY}} for cte in ctes], "faltandoXml": ctes[1:]}
     asyncio.run(xml_batch.run_xml_batch(SimpleNamespace(cwd=tmp_path, emit=emit), None, {}, plan,
         RunStartRequest(execution_scope="xml", manual_ctes="\n".join(ctes)), "batch", {}, tmp_path / "plan.json"))
     assert [c.args[1]["ctes"] for c in download.await_args_list] == ctes[1:]
     assert all(c.args[2].sample_cte == c.args[1]["ctes"] for c in download.await_args_list)
-    assert [c.kwargs["payload"]["total"] for c in emit.await_args_list] == [2, 2]
+    progress = [c for c in emit.await_args_list if c.kwargs["kind"] == "xml_sefaz.progress"]
+    assert [c.kwargs["payload"]["total"] for c in progress] == [2, 2]
+    assert emit.await_args.kwargs["kind"] == "xml_sefaz.batch_completed"
+    assert emit.await_args.kwargs["payload"]["done"] == 2
 
 
 def test_batch_errors_cannot_appear_as_success(monkeypatch, tmp_path):

@@ -27,6 +27,18 @@ export function DesktopSettings() {
     },
     onError: (error: Error) => toast.error(error.message),
   });
+  const widget = useQuery({
+    queryKey: ["desktop-widget"],
+    queryFn: () => desktop.widgetEnabled(),
+    enabled: desktop.isDesktop,
+    refetchInterval: 5_000,
+    retry: 0,
+  });
+  const changeWidget = useMutation({
+    mutationFn: (enabled: boolean) => desktop.setWidgetEnabled(enabled),
+    onSuccess: (enabled) => qc.setQueryData(["desktop-widget"], enabled),
+    onError: (error: Error) => toast.error(error.message),
+  });
   if (!desktop.isDesktop) return null;
   return (
     <Section title="Aplicativo e inicialização">
@@ -42,9 +54,6 @@ export function DesktopSettings() {
               onCheckedChange={(enabled) => change.mutate(enabled)}
             />
           </div>
-          <p className="max-w-xl text-xs text-muted-foreground">
-            Ao entrar nesta conta Windows, o Cargo Hub ficará na bandeja com os agendamentos ativos.
-          </p>
         </div>
         <Button
           variant="outline"
@@ -56,10 +65,26 @@ export function DesktopSettings() {
           Manter em segundo plano
         </Button>
       </div>
-      <p className="mt-4 text-xs text-muted-foreground">
-        Fechar a janela pelo X mantém o aplicativo na bandeja. Use Abrir Cargo Hub para voltar ou
-        Sair do Cargo Hub para encerrar.
-      </p>
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+        <div className="flex items-center gap-3">
+          <Label htmlFor="desktop-widget">Widget de agendamentos em segundo plano</Label>
+          <Switch
+            id="desktop-widget"
+            checked={widget.data ?? false}
+            disabled={!widget.isSuccess || changeWidget.isPending}
+            onCheckedChange={(value) => changeWidget.mutate(value)}
+          />
+        </div>
+        <Button
+          variant="outline"
+          disabled={!widget.data}
+          onClick={() =>
+            void desktop.showStatusWidget().catch((error: Error) => toast.error(error.message))
+          }
+        >
+          Ver widget
+        </Button>
+      </div>
       {startup.isError && (
         <p role="alert" className="mt-2 text-sm text-destructive">
           Não foi possível consultar a inicialização com o Windows.

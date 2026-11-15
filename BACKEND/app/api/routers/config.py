@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends
 
-from app.api.deps import get_env_catalog, get_settings_from_app
+from app.api.deps import get_env_catalog, get_settings_from_app, require_master_access
 from app.config.env_catalog import EnvCatalog
 from app.config.settings import Settings
 
 
-router = APIRouter(prefix="/config", tags=["config"])
+router = APIRouter(prefix="/config", tags=["config"], dependencies=[Depends(require_master_access)])
 
 
 @router.get("")

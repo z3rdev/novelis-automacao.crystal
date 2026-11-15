@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "status-widget",
+  "description": "Janela compacta de acompanhamento dos agendamentos.",
+  "windows": ["status-widget"],
+  "permissions": ["core:default", "core:window:allow-start-dragging", "core:window:allow-set-theme"]
+}

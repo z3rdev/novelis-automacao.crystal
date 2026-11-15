@@ -2,6 +2,8 @@ import type {
   AutomationApi, AutomationStep, Chamado, ConfigGroup, Cte, DacteJob, DocStatus, LogEntry,
   RunStatus, Severity, StageId, StageProgress, StartRunRequest,
 } from "./types";
+import { tariffMock } from "./tariff-mock";
+import { chatMock } from "./chat-mock";
 
 // PRNG determinístico para dados estáveis entre recargas.
 let seed = 42;
@@ -77,6 +79,7 @@ let lastUpdate = new Date(now - 14 * 60000).toISOString();
   const flowStages: Record<string, StageId[]> = {
     consulta: ["consulta"],
   completo: stageIds, documentos: ["consulta", "pdf", "xml", "comprovantes"],
+  somente_comprovantes: ["consulta", "comprovantes"], buscar_chamados: ["consulta"],
   somente_pdf: ["pdf"], somente_xml: ["xml"], somente_chamados: ["chamados"],
 };
 
@@ -167,16 +170,49 @@ let config: ConfigGroup[] = [
 const clone = <T,>(v: T): T => structuredClone(v);
 
 export const mockApi: AutomationApi = {
+  ...chatMock,
+  async listExecutionReports(page) { return { rows: [], total: 0, page, page_size: 30 }; },
+  async getExecutionReport() { throw new Error("Nenhum relatório na demonstração."); },
+  async downloadExecutionReport() { throw new Error("Nenhum relatório na demonstração."); },
+  async syncExecutionReports() {},
+  ...tariffMock,
+  async getMasterPolicy() { return { configured: false, updated_at: null, updated_by: null }; },
+  async saveMasterPolicy() { throw new Error("Disponível no modo desenvolvedor conectado."); },
+  async getChamado(identifier) {
+    const row = chamados.find((value) => (value.id ?? value.cte) === identifier);
+    if (!row) throw new Error("Chamado de exemplo não encontrado.");
+    return { ...clone(row), chave: "", statusOriginal: "", portalUrl: null, sincronizadoEm: null, descricao: "Registro fictício para demonstração da interface." };
+  },
+  async getMasterAccess() { return { configured: false, can_setup: false, unlocked: false, expires_at: null }; },
+  async setupMasterAccess() { throw new Error("Cadastre a senha mestre no backend local."); },
+  async unlockMasterAccess() { throw new Error("Conecte ao backend local para desbloquear."); },
+  async lockMasterAccess() {},
+  async getMessages() { return { title: "CTE {cte}", signature: "Operador de exemplo", message: "PREZADOS,\n\nSegue o CT-e {cte}.\n{assinatura}", complement_message: "CT-e complementar {cte}. Origem: {cteOrigem}\n{assinatura}", allow_missing_receipt: false }; },
+  async saveMessages() { throw new Error("Conecte ao backend local para salvar as mensagens."); },
+  async listChamadosPage({ search = "", status = "todos", page = 0, size = 100 }) {
+    const rows = chamados.filter((row) => (status === "todos" || row.andamento === status) && JSON.stringify(row).toLowerCase().includes(search.toLowerCase()));
+    const counts = Object.fromEntries(["na_fila", "aberto", "em_analise", "solucionado", "falhou"].map((s) => [s, chamados.filter((row) => row.andamento === s).length]));
+    return { rows: clone(rows.slice(page * size, (page + 1) * size)), total: rows.length, page, page_size: size, counts, source: "demo", synced_at: null };
+  },
+  async getChamadosSummary() {
+    return { counts: Object.fromEntries(["na_fila", "aberto", "em_analise", "solucionado", "falhou"].map((status) => [status, chamados.filter((row) => row.andamento === status).length])) };
+  },
   async getDeveloperMonitor() { throw new Error("O monitor de usuários requer o backend local em modo desenvolvedor."); },
+  async getDiagnosticAgents() { return { agents: [] }; },
+  async listDiagnosticRequests() { return { requests: [] }; },
+  async requestDiagnostic() { throw new Error("O diagnóstico remoto requer um backend local em modo desenvolvedor."); },
+  async getDiagnosticRequest() { throw new Error("Diagnóstico remoto indisponível na demonstração."); },
   async getNotifications() { return []; },
   async markNotificationRead() {},
   async getDeveloperNotifications() { return []; },
   async publishNotification() { throw new Error("Conecte ao backend com modo desenvolvedor para publicar avisos."); },
   async archiveNotification() { throw new Error("Conecte ao backend com modo desenvolvedor para encerrar avisos."); },
   async getSchedules() { return { schedules: [], device: "Demonstração", local_time: new Date().toISOString() }; },
+  async getScheduleHistory() { return { rows: [], total: 0, page: 0, page_size: 20 }; },
   async createSchedule() { throw new Error("Conecte ao backend local para configurar agendamentos."); },
   async updateSchedule() { throw new Error("Conecte ao backend local para configurar agendamentos."); },
   async removeSchedule() { throw new Error("Conecte ao backend local para configurar agendamentos."); },
+  async runSchedule() { throw new Error("Conecte ao backend local para iniciar uma rotina salva."); },
   async getDeveloperConfig() { return { enabled: false, endpoint: "", bucket: "", prefix: "", manifest_url: "" }; },
   async testReleaseConnection() { throw new Error("Conecte ao backend local para testar releases."); },
   async getPublishStatus() { return { status: "idle", sent_bytes: 0, total_bytes: 0, version: null, filename: null, message: "", release: null }; },

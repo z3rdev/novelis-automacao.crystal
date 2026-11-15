@@ -4,7 +4,7 @@ from typing import Any
 from app.automation.cancellation import run_blocking
 from app.automation.flows.comprovantes_locais.steps.comprovante_local import ComprovanteLocalFlow
 from app.automation.flows.flow_events import Emit, emit_step, emit_warn
-from app.automation.flows.novelis_chamados.steps.chamado_novelis import ChamadoNovelisFlow
+from app.automation.flows.novelis_chamados.steps.chamado_batch import run_chamados
 from app.automation.flows.novelis_relatorio.steps.novelis_relatorio_cte_xml import (
     NovelisRelatorioCteXmlFlow,
 )
@@ -15,17 +15,21 @@ from app.automation.flows.pendentes.controles.events import (
 from app.automation.flows.pendentes.controles.execution_scope import scoped_config
 from app.automation.flows.pendentes.controles.guards import should_block_unfiltered_execution
 from app.automation.flows.pendentes.controles.manual_input import ManualInputResolver
+from app.automation.flows.pendentes.controles.opening_queue import include_opening_queue
 from app.automation.flows.pendentes.controles.pdf_source import run_legacy_pdf, select_pdf_runner
 from app.automation.flows.pendentes.controles.pdf_xml_parallel import PdfXmlParallelRunner
 from app.automation.flows.pendentes.controles.plan import PendentesPlanBuilder
+from app.automation.flows.pendentes.controles.plan_reuse import filtered_plan
 from app.automation.flows.pendentes.controles.xml_batch import run_xml_batch
 from app.config.legacy_config import LegacyConfig
 from app.config.settings import Settings
 from app.data.consulta_db import fetch_last_5_days_rows
 from app.domain.models import RunStartRequest
-from app.infrastructure.json_store import write_json
+from app.infrastructure.json_store import read_json, write_json
 from app.services.browser_driver import BrowserDriver
 from app.services.step_repository import StepRepository
+from app.services.pending_queue import eligible_plan, record_plan
+from app.services.tariffs.audit import annotate_plan
 
 
 class PendentesFlow:
@@ -59,13 +63,15 @@ class PendentesFlow:
         xml_config = self.legacy_config.xml_sefaz()
         comprovante_config = self.legacy_config.comprovante_local()
         chamado_config = self.legacy_config.chamado_novelis()
+        if not config.get("skipNovelis"):
+            chamado_config = {**chamado_config, "relatorioCteXmlTransport": "http"}
         config = await ManualInputResolver(self.cwd, self.emit).apply(
             config,
             request,
             run_id,
             self.legacy_config.consulta_db(),
         )
-        if request.pendentes_sql_days_back is not None and not (
+        if (request.pendentes_sql_days_back is not None or request.consulta_data_inicio) and not (
             request.manual_ctes or request.manual_spreadsheet or request.sample_cte or request.sample_documento
         ):
             config = {**config, "refreshSql": True, "strictSql": True}
@@ -74,7 +80,9 @@ class PendentesFlow:
             self.legacy_config.consulta_db(),
             run_id,
             request.pendentes_sql_days_back,
+            request.consulta_data_inicio, request.consulta_data_fim,
         )
+        sql_source = await include_opening_queue(self.settings, sql_source, request, self.emit, run_id, self.legacy_config.consulta_db())
         if sql_source:
             config = {**config, "sourceJson": str(sql_source)}
         plan_file = self._plan_file(config)
@@ -86,6 +94,7 @@ class PendentesFlow:
             comprovante_config,
             request,
             run_id,
+            check_files=False,
         )
         filtered_source = await self._refresh_novelis_relatorio(
             browser,
@@ -97,15 +106,8 @@ class PendentesFlow:
         )
         if filtered_source:
             config = {**config, "sourceJson": str(filtered_source)}
-            plan = await self._refresh_plan(
-                config,
-                rodopar_config,
-                xml_config,
-                comprovante_config,
-                request,
-                run_id,
-                "Depois da consulta Novelis",
-            )
+        plan = await self._refresh_plan(config, rodopar_config, xml_config, comprovante_config,
+                                        request, run_id, "Depois da consulta Novelis" if filtered_source else "Plano de pendentes")
 
         if request.flow.strip().lower() in {"consulta-pendentes", "consulta"}:
             await emit_completed_summary(self.emit, run_id, plan_file, plan)
@@ -166,16 +168,12 @@ class PendentesFlow:
         ).run(browser, rodopar_config, xml_config, comprovante_config, plan, request, run_id, config, plan_file)
 
         if not config.get("skipComprovantes"):
+            checked_proofs = bool(plan["faltandoComprovante"])
             await self._run_comprovantes(comprovante_config, plan, request, run_id, config)
-            plan = await self._refresh_plan(
-                config,
-                rodopar_config,
-                xml_config,
-                comprovante_config,
-                request,
-                run_id,
-                "Depois dos comprovantes",
-            )
+            if checked_proofs:
+                plan = await self._refresh_plan(
+                    config, rodopar_config, xml_config, comprovante_config,
+                    request, run_id, "Depois dos comprovantes")
 
         if not config.get("skipNovelis"):
             await self._run_chamados(browser, chamado_config, plan, request, run_id, config, plan_file)
@@ -183,7 +181,13 @@ class PendentesFlow:
             if final_source:
                 errors = plan.get("errors") or []
                 config = {**config, "sourceJson": str(final_source)}
-                plan = await self._refresh_plan(config, rodopar_config, xml_config, comprovante_config, request, run_id, "Depois do relatório final Novelis")
+                payload = await run_blocking(read_json, final_source, {})
+                reused = filtered_plan(plan, payload, str(final_source))
+                if reused is None:
+                    plan = await self._refresh_plan(config, rodopar_config, xml_config, comprovante_config, request, run_id, "Depois do relatório final Novelis")
+                else:
+                    plan = reused
+                    await self._persist_plan(config, plan, run_id, "Plano final", reused=True)
                 if errors:
                     plan["errors"] = errors
 
@@ -196,6 +200,7 @@ class PendentesFlow:
         db_config: dict[str, Any],
         run_id: str,
         days_back: int | None = None,
+        start_date=None, end_date=None,
     ) -> Path | None:
         if not config.get("refreshSql") or not db_config.get("enabled"):
             if config.get("strictSql"):
@@ -209,14 +214,17 @@ class PendentesFlow:
 
         days = max(0, int(days_back if days_back is not None else 5))
         period = "do dia atual" if days == 0 else f"dos ultimos {days} dias, incluindo hoje"
+        if start_date:
+            period = f"de {start_date:%d/%m/%Y} até {end_date:%d/%m/%Y}"
         await emit_step(
             self.emit,
             run_id,
             "pendentes.sql_refresh",
-            f"Consultando SQL {period} para montar pendentes.",
+            f"SQL Server: consultando CT-es {period} para montar a fila.",
+            {"querySource": "sql"},
         )
         try:
-            result = await run_blocking(fetch_last_5_days_rows, db_config, days)
+            result = await run_blocking(fetch_last_5_days_rows, db_config, days, start_date, end_date) if start_date else await run_blocking(fetch_last_5_days_rows, db_config, days)
         except Exception as exc:
             if config.get("strictSql"):
                 raise
@@ -244,7 +252,7 @@ class PendentesFlow:
             self.emit,
             run_id,
             "pendentes.sql_loaded",
-            f"SQL {period} carregado: {len(result.rows)} CTE(s).",
+            f"SQL Server: {len(result.rows)} CT-e(s) carregados {period}.",
             {"sourceJson": str(output_file), "total": len(result.rows)},
         )
         return output_file
@@ -304,6 +312,7 @@ class PendentesFlow:
             {
                 "generatedAt": relatorio.get("payload", {}).get("generatedAt"),
                 "sourceKind": "python_pendentes_novelis_filtered",
+                "queueEligible": eligible_plan({"sourceFile": str(filtered_file)}, request),
                 "sourceFile": plan.get("sourceFile") or "",
                 "relatorioExcelFile": relatorio.get("excelFile") or "",
                 "relatorioJsonFile": relatorio.get("jsonFile") or "",
@@ -320,7 +329,7 @@ class PendentesFlow:
             run_id,
             "pendentes.novelis_relatorio",
             (
-                f"Consulta Novelis aplicada: {len(relatorio.get('existingRows') or [])} já existente(s), "
+                f"Relatório Novelis: {len(relatorio.get('existingRows') or [])} já existente(s), "
                 f"{len(relatorio.get('rows') or [])} segue(m) pendente(s)."
             ),
             {"filteredSourceJson": str(filtered_file), "excelFile": relatorio.get("excelFile") or ""},
@@ -343,7 +352,7 @@ class PendentesFlow:
             self.emit,
             run_id,
             "pendentes.novelis_relatorio_final",
-            "Relatório Novelis atualizado após abertura dos chamados." if refreshed else "Relatório Novelis final não foi atualizado.",
+            "Relatório Novelis: conferência final concluída." if refreshed else "Relatório Novelis: conferência final não realizada.",
             {"filteredSourceJson": str(refreshed or "")},
         )
         return refreshed
@@ -357,6 +366,8 @@ class PendentesFlow:
         request: RunStartRequest,
         run_id: str,
         label: str = "Plano de pendentes",
+        *,
+        check_files: bool = True,
     ) -> dict[str, Any]:
         plan = await PendentesPlanBuilder(self.cwd, self.emit).build(
             config,
@@ -366,10 +377,23 @@ class PendentesFlow:
             request,
             run_id,
             self.legacy_config.chamado_novelis(),
+            check_files=check_files,
         )
-        self._write_plan(config, plan)
-        await emit_plan_summary(self.emit, plan, run_id, label)
+        if not check_files:
+            return plan
+        plan["queueEligible"] = config.get("queueEligible", True) and eligible_plan(plan, request)
+        plan = await run_blocking(annotate_plan, plan, self.legacy_config)
+        await self._persist_plan(config, plan, run_id, label)
         return plan
+
+    async def _persist_plan(self, config, plan, run_id, label, *, reused=False):
+        await run_blocking(self._write_plan, config, plan)
+        await run_blocking(record_plan, self.settings, plan)
+        if reused:
+            await emit_step(self.emit, run_id, "pendentes.plan_reused",
+                            "Plano final atualizado; verificação dos arquivos reaproveitada.", {"total": plan["total"]})
+        else:
+            await emit_plan_summary(self.emit, plan, run_id, label)
 
     async def _run_rodopar_pdf(
         self,
@@ -439,41 +463,7 @@ class PendentesFlow:
         config: dict[str, Any],
         plan_file: Path,
     ) -> None:
-        items = [item for item in plan["checked"] if item["cte"] in plan["prontosChamado"]]
-        if not items:
-            await emit_step(self.emit, run_id, "pendentes.novelis_skip", "Chamado Novelis: nada para fazer.")
-            return
-        for index, item in enumerate(items):
-            cte = item["cte"]
-            await emit_step(
-                self.emit,
-                run_id,
-                "chamado_novelis.progress",
-                f"Chamados {index + 1}/{len(items)}: {cte}.",
-                {"current": index + 1, "total": len(items), "cte": cte},
-            )
-            try:
-                await ChamadoNovelisFlow(self.cwd, self.emit).run(
-                    browser,
-                    {
-                        **chamado_config,
-                        "ctes": cte,
-                        "sourceJson": str(plan_file),
-                        "tarifarioJson": str(plan_file), "evidence": item.get("evidence", {}),
-                    },
-                    request.model_copy(update={"sample_cte": cte, "max_steps": None}),
-                    run_id,
-                )
-            except Exception as exc:
-                if config.get("stopOnError"):
-                    raise
-                await emit_warn(
-                    self.emit,
-                    run_id,
-                    "pendentes.novelis_error",
-                    f"Chamado Novelis falhou para {cte}: {exc}",
-                    plan.setdefault("errors", []).append({"stage": "novelis", "cte": cte, "message": str(exc)}) or {"cte": cte},
-                )
+        await run_chamados(self, chamado_config, plan, request, run_id, config, plan_file)
 
     def _write_plan(self, config: dict[str, Any], plan: dict[str, Any]) -> Path:
         path = self._plan_file(config)

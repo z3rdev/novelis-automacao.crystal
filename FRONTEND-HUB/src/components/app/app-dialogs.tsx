@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
 
-type DialogName = "updates" | "notifications";
+type DialogName = "updates" | "notifications" | "workflow-completion";
 interface DialogState {
   active: DialogName | null;
   show(name: DialogName): void;

@@ -1,0 +1,104 @@
+.diagnostic-request-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+}
+.diagnostic-request-form label {
+  display: grid;
+  gap: 7px;
+  font-size: 13px;
+}
+.diagnostic-request-form label:first-child {
+  min-width: 240px;
+  flex: 1;
+}
+.diagnostic-report-panel {
+  display: flex;
+  flex-direction: column;
+}
+.diagnostic-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.diagnostic-summary > div {
+  padding: 14px;
+}
+.diagnostic-summary > div + div {
+  border-left: 1px solid var(--border);
+}
+.diagnostic-summary dt {
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+.diagnostic-summary dd {
+  margin-top: 8px;
+  font-size: 22px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.diagnostic-event {
+  padding: 16px 0;
+}
+.diagnostic-http-fields {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.diagnostic-http-fields dt {
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+.diagnostic-http-fields dd {
+  margin-top: 4px;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.diagnostic-technical {
+  margin-top: 12px;
+}
+.diagnostic-technical summary {
+  cursor: pointer;
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.diagnostic-technical pre {
+  max-height: 320px;
+  overflow: auto;
+  padding: 14px;
+  margin-top: 8px;
+  background: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font-size: 11px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.diagnostic-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 48px 16px;
+  text-align: center;
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+@media (max-width: 600px) {
+  .diagnostic-summary,
+  .diagnostic-http-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .diagnostic-summary > div:nth-child(3) {
+    border-left: 0;
+  }
+  .diagnostic-request-form label:first-child {
+    min-width: 0;
+    flex-basis: 100%;
+  }
+}

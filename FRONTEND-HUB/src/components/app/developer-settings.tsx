@@ -46,10 +46,6 @@ export function DeveloperSettings() {
           <dd className="mt-1 break-all font-mono text-xs">{config.data.manifest_url}</dd>
         </div>
       </dl>
-      <p className="mt-4 text-xs text-muted-foreground">
-        Ativado por CONFIG.dev com DEVMODE=1 e credentials.json na pasta BACKEND. As credenciais são
-        lidas localmente pelo backend.
-      </p>
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <Button variant="outline" onClick={() => probe.mutate()} disabled={probe.isPending}>
           {probe.isPending ? <Loader2 className="animate-spin" /> : <Server />}Testar conexão de

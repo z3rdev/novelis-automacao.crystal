@@ -151,16 +151,10 @@ def diagnose(
 
 
 def write_diagnostic(report: dict, directory: Path) -> None:
-    from html import escape
+    from app.services.crystal_reports.diagnostic_view import render_diagnostic, sanitize
 
     directory.mkdir(parents=True, exist_ok=True)
-    data = json.dumps(report, ensure_ascii=False, indent=2)
+    data = json.dumps(sanitize(report), ensure_ascii=False, indent=2)
     (directory / "dacte-diagnostic.json").write_text(data + "\n", encoding="utf-8")
-    html = (
-        "<!doctype html><html lang='pt-BR'><meta charset='utf-8'><title>Diagnostico DACTE</title>"
-        "<style>body{font:16px system-ui;max-width:1100px;margin:40px auto;padding:20px}"
-        "pre{white-space:pre-wrap;background:#f2f4f7;padding:20px}</style>"
-        "<h1>Diagnostico de instalacao DACTE</h1><p>Prontidao tecnica e validacao fiscal sao verificacoes distintas.</p>"
-        "<pre>" + escape(data) + "</pre></html>"
-    )
+    html = render_diagnostic(report)
     (directory / "dacte-diagnostic.html").write_text(html, encoding="utf-8")

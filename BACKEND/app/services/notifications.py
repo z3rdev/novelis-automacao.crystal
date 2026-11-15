@@ -59,7 +59,6 @@ class NotificationService:
             except ValidationError:
                 raise ValueError("O catálogo de notificações do servidor possui formato inválido.") from None
             self._save_cache(feed)
-            self.repository.read(str(notice.id), actor["windows_user"])
         return notice.model_dump(mode="json")
 
     def read(self, identifier: str, windows_user: str) -> bool:

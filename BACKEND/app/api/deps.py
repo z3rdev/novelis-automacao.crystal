@@ -1,4 +1,5 @@
 import asyncio
+import sqlite3
 
 from fastapi import HTTPException, Request
 
@@ -14,12 +15,27 @@ from app.services.step_repository import StepRepository
 
 
 async def require_operator_session(request: Request) -> dict:
-    audit = request.app.state.session_audit
+    audit = getattr(request.app.state, "session_audit", None)
     identifier = request.headers.get("X-Operator-Session")
     session = await asyncio.to_thread(audit.session, identifier) if audit and identifier else None
     if not session:
         raise HTTPException(401, "Entre no Cargo Hub para continuar.")
     return session
+
+
+async def require_master_access(request: Request) -> dict:
+    from app.services.master_access import MasterDenied
+    actor = await require_operator_session(request)
+    service = getattr(request.app.state, "master_access", None)
+    if not service or not service.store.ready:
+        raise HTTPException(503, "O banco compartilhado da senha mestre está indisponível.")
+    try:
+        await asyncio.to_thread(service.require, actor)
+    except MasterDenied as exc:
+        raise HTTPException(403, str(exc)) from None
+    except (OSError, RuntimeError, sqlite3.Error):
+        raise HTTPException(503, "O banco compartilhado da senha mestre está indisponível.") from None
+    return actor
 
 
 def get_settings_from_app(request: Request) -> Settings:

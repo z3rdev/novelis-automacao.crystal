@@ -4,7 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { HubNotification } from "@/services";
 import { AppDialogs, useAppDialogs } from "./app-dialogs";
 import { NotificationDialog } from "./notification-dialog";
-import { ScheduleForm, emptySchedule } from "./schedule-form";
+import { ScheduleForm } from "./schedule-form";
+import { emptySchedule } from "@/services/schedule-options";
+import { selectOption } from "@/test/select-option";
 
 beforeEach(() => {
   vi.stubGlobal(
@@ -98,7 +100,7 @@ describe("notificações e agendamentos", () => {
     expect(screen.getByTestId("active-dialog")).toHaveTextContent("updates");
   });
 
-  it("configura 08:00, dias anteriores e execução somente PDF", () => {
+  it("configura 08:00, dias anteriores e execução somente PDF", async () => {
     const save = vi.fn();
     function Form() {
       const [value, setValue] = useState(emptySchedule);
@@ -114,18 +116,17 @@ describe("notificações e agendamentos", () => {
       );
     }
     render(<Form />);
-    expect(screen.getByLabelText("Horário local")).toHaveValue("08:00");
+    expect(screen.getByLabelText("Horário de início")).toHaveTextContent("08:00");
     fireEvent.change(screen.getByLabelText("Nome do agendamento"), {
       target: { value: "PDFs da manhã" },
     });
-    fireEvent.change(screen.getByLabelText("Tipo de execução"), {
-      target: { value: "somente_pdf" },
-    });
+    await selectOption("Etapa", "Baixar PDFs");
     fireEvent.change(screen.getByLabelText("Dias anteriores incluídos"), {
       target: { value: "2" },
     });
+    fireEvent.click(screen.getByRole("button", { name: "Escolher" }));
     fireEvent.click(screen.getByRole("button", { name: /^Dom$/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Salvar agendamento" }));
+    fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
     expect(save).toHaveBeenCalledWith({
       name: "PDFs da manhã",
       time: "08:00",
@@ -133,6 +134,10 @@ describe("notificações e agendamentos", () => {
       flow: "somente_pdf",
       weekdays: [0, 1, 2, 3, 4, 5],
       enabled: true,
+      runs_per_day: 1,
+      interval_minutes: 60,
+      max_retries: 0,
+      retry_interval_minutes: 5,
     });
   });
 
@@ -147,7 +152,7 @@ describe("notificações e agendamentos", () => {
         editing={false}
       />,
     );
-    expect(screen.getByRole("button", { name: "Salvar agendamento" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Salvar" })).toBeDisabled();
     expect(screen.getByText("Selecione ao menos um dia.")).toBeInTheDocument();
   });
 });

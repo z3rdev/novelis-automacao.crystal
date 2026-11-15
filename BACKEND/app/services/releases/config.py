@@ -9,6 +9,22 @@ PREFIX = "cargo-hub/"
 MANIFEST_URL = f"{ENDPOINT}/{BUCKET}/{PREFIX}latest.json"
 
 
+def s3_client(credentials_file: Path):
+    import boto3
+    from botocore.config import Config
+
+    credentials = json.loads(credentials_file.read_text(encoding="utf-8-sig"))
+    if credentials.get("url", "").rstrip("/") != ENDPOINT:
+        raise ValueError("O endpoint das credenciais difere do servidor configurado.")
+    if not credentials.get("accessKey") or not credentials.get("secretKey"):
+        raise ValueError("Credenciais locais incompletas.")
+    return boto3.client("s3", endpoint_url=ENDPOINT, region_name=credentials.get("region", "us-east-1"),
+        aws_access_key_id=credentials["accessKey"], aws_secret_access_key=credentials["secretKey"],
+        config=Config(signature_version="s3v4", connect_timeout=5, read_timeout=60,
+            retries={"max_attempts": 1, "mode": "standard"}, s3={"addressing_style": "path"},
+            request_checksum_calculation="when_required", response_checksum_validation="when_required"))
+
+
 class DeveloperConfig:
     def __init__(self, backend_root: Path):
         self.root = backend_root

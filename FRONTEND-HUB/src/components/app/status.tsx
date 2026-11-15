@@ -48,6 +48,8 @@ export function StagePill({ s }: { s: StageState }) {
 
 export const stageLabel: Record<StageId, string> = { consulta: "Consulta", pdf: "PDF (DACTE)", xml: "XML (SEFAZ)", comprovantes: "Comprovantes", chamados: "Chamados" };
 export const flowLabel: Record<FlowId, string> = {
+  personalizado: "Fluxo personalizado",
+  somente_comprovantes: "Somente buscar comprovantes", buscar_chamados: "Atualizar relatório de chamados Novelis",
   consulta: "Somente consulta de pendências",
   completo: "Fluxo completo (consulta → chamados)", documentos: "Somente documentos (sem chamados)",
   somente_pdf: "Somente geração de PDF", somente_xml: "Somente busca de XML", somente_chamados: "Somente chamados Novelis",
