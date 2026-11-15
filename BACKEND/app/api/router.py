@@ -24,6 +24,7 @@ from app.api.routers import (
     execution_reports,
     developer_diagnostics,
     chat,
+    chat_live,
 )
 
 
@@ -52,3 +53,4 @@ api_router.include_router(tariffs.router)
 api_router.include_router(execution_reports.router)
 api_router.include_router(developer_diagnostics.router)
 api_router.include_router(chat.router)
+api_router.include_router(chat_live.router)

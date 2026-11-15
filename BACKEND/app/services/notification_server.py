@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field, field_validator
 from app.domain.hub_features import NotificationInput
 from app.services.releases.config import BUCKET, ENDPOINT, PREFIX, DeveloperConfig
 from app.services.releases.storage import storage_error
+from app.services.minio_config import operational_client
 
 MAX_FEED_BYTES = 10 * 1024**2
 
@@ -45,10 +46,17 @@ class NotificationServer:
         return f"{ENDPOINT}/{BUCKET}/{self.prefix}feed.json"
 
     def read(self) -> NotificationFeed:
-        if self.config.enabled():
+        client = None
+        if hasattr(self.config, "root"):
+            from app.config.legacy_config import LegacyConfig
+            from app.config.settings import Settings
+            client = operational_client(self.config.root, LegacyConfig(Settings()))
+        elif self.config.enabled():
+            client = self.config.client()
+        if client is not None:
             from botocore.exceptions import BotoCoreError, ClientError
             try:
-                response = self.config.client().get_object(Bucket=BUCKET, Key=self.prefix + "feed.json")
+                response = client.get_object(Bucket=BUCKET, Key=self.prefix + "feed.json")
                 with response["Body"] as body:
                     content = body.read(MAX_FEED_BYTES + 1)
             except ClientError as exc:

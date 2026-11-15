@@ -1,0 +1,6 @@
+chat-server-db-cargohub.appsy.app.br {
+    request_body {
+        max_size 21MB
+    }
+    reverse_proxy chat:8080
+}

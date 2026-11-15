@@ -1,0 +1,19 @@
+services:
+  proxy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/chat/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      chat:
+        condition: service_healthy
+    networks:
+      - proxy
+volumes:
+  caddy-data:
+  caddy-config:

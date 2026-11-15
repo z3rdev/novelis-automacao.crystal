@@ -4,6 +4,10 @@
 
 Em **Mensagens**, o botão **+** junto ao campo de texto abre a solicitação na conversa selecionada. A lista **CT-es pendentes de GNRE e comprovante** mostra os itens da fila de abertura com documentação exigida e faltante. A seleção preenche o CT-e. Continua possível informar o CT-e manualmente, inclusive para tratar um chamado já existente.
 
+Enviar novamente o mesmo CT-e publica outro card na conversa. A solicitação reaproveita os documentos, o responsável e o andamento registrados. Todos os cards daquele CT-e mostram a documentação atual. Cada envio possui um identificador próprio, reutilizado nas tentativas após falha de conexão para evitar mensagens duplicadas.
+
+As mensagens de texto aparecem imediatamente com o estado **Enviando**. A confirmação do servidor atualiza o mesmo item. O WebSocket entrega a mensagem gravada às conversas autorizadas e a interface concilia os identificadores para evitar duplicação. As atualizações periódicas recuperam o histórico após uma reconexão.
+
 O botão **Solicitar GNRE** do cabeçalho permite escolher Financeiro ou um operador online desse setor. A presença considera contato do chat nos últimos 90 segundos. Os documentos são vinculados à identidade completa `filial-serie-documento`, compartilhada entre as solicitações desse CT-e. O login usa o nome da conta Windows, sem edição pelo operador.
 
 ## Armazenamento
@@ -37,7 +41,7 @@ Documentação oficial da API de lifecycle: [PutBucketLifecycleConfiguration](ht
 
 ## Configuração privada
 
-O backend usa `GNRE_S3_CREDENTIALS_FILE`, quando informado. Caso contrário, reutiliza `EXECUTION_REPORT_S3_CREDENTIALS_FILE`. Na máquina de desenvolvimento, também pode usar a configuração local de desenvolvimento existente.
+O backend usa `GNRE_S3_CREDENTIALS_FILE`, quando informado, ou `MINIO_CREDENTIALS_FILE`. Também aceita `minio.credentials.json` ou `credentials.json` na pasta do backend. Essas operações funcionam independentemente de `CONFIG.dev`. Os relatórios usam `EXECUTION_REPORT_S3_CREDENTIALS_FILE` ou a configuração operacional comum.
 
 O arquivo segue o formato já usado no projeto, com `url`, `accessKey`, `secretKey` e `region` opcional. Deve permanecer fora do repositório e do frontend. Cada backend que envia ou lê documentos precisa de acesso autorizado a esse armazenamento. A configuração atual do instalador não foi reconstruída nesta alteração.
 

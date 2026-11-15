@@ -9,9 +9,14 @@ const fixture = vi.hoisted(() => ({
   sound: vi.fn(),
   toast: vi.fn(),
   navigate: vi.fn(),
+  watch: vi.fn(),
 }));
 vi.mock("@/services", () => ({
-  useApi: () => ({ api: { getChatInbox: fixture.inbox }, mode: "local", baseUrl: "chat-fixture" }),
+  useApi: () => ({
+    api: { getChatInbox: fixture.inbox, watchChatEvents: fixture.watch },
+    mode: "local",
+    baseUrl: "chat-fixture",
+  }),
 }));
 vi.mock("@/services/desktop", () => ({ desktop: { playNotificationSound: fixture.sound } }));
 vi.mock("@tanstack/react-router", () => ({
@@ -82,4 +87,26 @@ it("não repete som de mensagem já avisada ao reabrir o aplicativo", async () =
   show();
   await waitFor(() => expect(readChatAlert()?.unread).toBe(1));
   expect(fixture.sound).toHaveBeenCalledTimes(1);
+});
+
+it("insere a mensagem recebida por WebSocket diretamente na conversa", () => {
+  const { client } = show();
+  const key = ["chat-room", "local", "chat-fixture", "room-1", 0];
+  client.setQueryData(key, { messages: [], requests: [], before: null });
+  const receive = fixture.watch.mock.calls[0]?.[0];
+  const message = {
+    id: "incoming",
+    seq: 20,
+    client_id: "attempt",
+    sender: "other",
+    sender_name: "Operador",
+    body: "A guia foi enviada",
+    kind: "text",
+    request_id: null,
+    created_at: "2026-11-15T19:00:00Z",
+  };
+  act(() => receive({ type: "message.created", room_id: "room-1", message }));
+  expect(client.getQueryData(key)).toMatchObject({ messages: [message] });
+  act(() => receive({ type: "message.created", room_id: "room-1", message }));
+  expect(client.getQueryData(key)).toMatchObject({ messages: [message] });
 });

@@ -2,6 +2,7 @@ import asyncio
 import sqlite3
 
 from fastapi import HTTPException, Request
+from app.api.operator_session import require_operator_session
 
 from app.config.settings import Settings
 from app.config.env_catalog import EnvCatalog
@@ -12,15 +13,6 @@ from app.services.automation_service import AutomationService
 from app.services.browser_driver import BrowserDriver
 from app.services.mapping_repository import MappingRepository
 from app.services.step_repository import StepRepository
-
-
-async def require_operator_session(request: Request) -> dict:
-    audit = getattr(request.app.state, "session_audit", None)
-    identifier = request.headers.get("X-Operator-Session")
-    session = await asyncio.to_thread(audit.session, identifier) if audit and identifier else None
-    if not session:
-        raise HTTPException(401, "Entre no Cargo Hub para continuar.")
-    return session
 
 
 async def require_master_access(request: Request) -> dict:

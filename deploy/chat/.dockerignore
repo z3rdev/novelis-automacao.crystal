@@ -1,0 +1,8 @@
+**
+!BACKEND/
+!BACKEND/app/
+!BACKEND/app/**
+!deploy/
+!deploy/chat/
+!deploy/chat/requirements.txt
+!deploy/chat/Dockerfile

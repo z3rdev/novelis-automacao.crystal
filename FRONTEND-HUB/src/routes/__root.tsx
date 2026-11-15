@@ -140,6 +140,7 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const inboxOpen = useRouterState({ select: (state) => state.location.pathname === "/notificacoes" });
+  const chatOpen = useRouterState({ select: (state) => state.location.pathname === "/conversas" });
   const { queryClient } = Route.useRouteContext();
 
   return (
@@ -149,14 +150,14 @@ function RootComponent() {
         <StatusWidgetBridge />
         <StartupScreen>
         <TooltipProvider delayDuration={200}>
-          <SessionGate><AppDialogs><NotificationProvider inboxOpen={inboxOpen}><UpdateProvider><SidebarProvider>
+          <SessionGate><AppDialogs><NotificationProvider inboxOpen={inboxOpen}><UpdateProvider><SidebarProvider className={chatOpen ? "chat-shell" : undefined}>
             <WorkflowCompletionMonitor />
             <ChatMonitor />
-            <div className="flex min-h-screen w-full">
+            <div className="cargo-main-frame flex min-h-screen w-full">
               <AppSidebar />
               <div className="relative isolate flex min-w-0 flex-1 flex-col overflow-x-clip">
                 <AppHeader />
-                <main className="min-w-0 flex-1">
+                <main className="cargo-route-main min-w-0 flex-1">
                   <Outlet />
                 </main>
               </div>

@@ -1,6 +1,6 @@
 import re
 from typing import Literal
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -43,6 +43,7 @@ class ChatMessageInput(BaseModel):
 
 
 class GnreRequestInput(BaseModel):
+    client_id: UUID = Field(default_factory=uuid4)
     cte: str
     note: str = Field(default="", max_length=2000)
     chamado: str = Field(default="", max_length=30, pattern=r"^\d*$")

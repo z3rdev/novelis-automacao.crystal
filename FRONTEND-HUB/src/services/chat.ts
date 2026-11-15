@@ -25,6 +25,8 @@ export interface ChatDirectory {
   sectors: { code: string; name: string }[];
 }
 export interface ChatMessage {
+  client_id?: string;
+  delivery?: "sending" | "failed";
   id: string;
   seq: number;
   sender: string;
@@ -70,6 +72,7 @@ export interface ChatDetail {
   delivery_warning?: string | null;
 }
 export interface ChatApi {
+  watchChatEvents?(listener: (event: import("./chat-events").ChatLiveEvent) => void): () => void;
   getChatInbox(): Promise<ChatInbox>;
   getChatDirectory(): Promise<ChatDirectory>;
   createChatRoom(target_type: "operator" | "sector", target: string): Promise<{ id: string }>;
@@ -78,7 +81,7 @@ export interface ChatApi {
   readChatRoom(id: string, through: number): Promise<void>;
   requestGnre(
     id: string,
-    body: { cte: string; note: string; chamado: string },
+    body: { cte: string; note: string; chamado: string; client_id?: string },
   ): Promise<{ id: string }>;
   claimGnre(room: string, id: string): Promise<void>;
   uploadGnre(

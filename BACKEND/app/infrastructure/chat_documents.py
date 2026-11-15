@@ -15,34 +15,33 @@ class ChatDocuments:
     def create(self, room_id, actor, body):
         with self.store.connection() as db:
             self.store.room(db, room_id, actor, lock=True)
-            existing = db.execute(
+            row = db.execute(
                 "SELECT * FROM public.cargo_hub_chat_requests WHERE room_id=%s AND cte=%s",
                 (room_id, body.cte),
             ).fetchone()
-            if existing:
-                return serialize(existing)
-            db.execute(
-                "INSERT INTO public.cargo_hub_chat_documents(cte) VALUES(%s) ON CONFLICT DO NOTHING",
-                (body.cte,),
-            )
-            row = db.execute(
-                """INSERT INTO public.cargo_hub_chat_requests
-                (id,room_id,cte,note,chamado,requested_by,requested_name) VALUES(%s,%s,%s,%s,%s,%s,%s) RETURNING *""",
-                (
-                    uuid4(),
-                    room_id,
-                    body.cte,
-                    body.note.strip(),
-                    body.chamado,
-                    actor["key"],
-                    actor["name"],
-                ),
-            ).fetchone()
+            if not row:
+                db.execute(
+                    "INSERT INTO public.cargo_hub_chat_documents(cte) VALUES(%s) ON CONFLICT DO NOTHING",
+                    (body.cte,),
+                )
+                row = db.execute(
+                    """INSERT INTO public.cargo_hub_chat_requests
+                    (id,room_id,cte,note,chamado,requested_by,requested_name) VALUES(%s,%s,%s,%s,%s,%s,%s) RETURNING *""",
+                    (
+                        uuid4(),
+                        room_id,
+                        body.cte,
+                        body.note.strip(),
+                        body.chamado,
+                        actor["key"],
+                        actor["name"],
+                    ),
+                ).fetchone()
             ChatRooms.insert_message(
                 db,
                 room_id,
                 actor,
-                uuid4(),
+                body.client_id,
                 f"Solicitação de guia GNRE e comprovante · CT-e {body.cte}",
                 "request",
                 row["id"],

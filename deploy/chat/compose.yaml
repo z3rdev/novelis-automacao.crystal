@@ -1,0 +1,44 @@
+name: cargo-hub-chat
+services:
+  chat:
+    build:
+      context: .
+      dockerfile: deploy/chat/Dockerfile
+    restart: unless-stopped
+    init: true
+    ports:
+      - "127.0.0.1:18437:8080"
+    networks:
+      proxy:
+        aliases:
+          - cargo-hub-chat
+    environment:
+      CHAT_SERVER_SETTINGS: /run/secrets/chat-settings
+      CHAT_CLIENTS_FILE: /run/secrets/chat-clients
+    secrets:
+      - chat-settings
+      - chat-clients
+      - minio-credentials
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+secrets:
+  chat-settings:
+    file: ./secrets/chat-server.private.json
+  chat-clients:
+    file: ./secrets/chat-clients.private.json
+  minio-credentials:
+    file: ./secrets/minio.credentials.json
+networks:
+  proxy:
+    external: true
+    name: infra_default

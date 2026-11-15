@@ -46,7 +46,7 @@ Para implantação normal, configurar `EXECUTION_REPORT_S3_CREDENTIALS_FILE` no 
 
 O perfil deve permitir GetBucketPolicy no bucket e PutObject/GetObject somente em `cargo-hub/reports/*`, com acesso de leitura ao cache compartilhado. Pode haver um publicador central ou perfis restritos nos computadores autorizados. Os leitores usam o catálogo compartilhado e as URLs assinadas; não recebem esse arquivo de credenciais.
 
-Na máquina de desenvolvimento, o mecanismo também utiliza o perfil já existente quando `CONFIG.dev` e `credentials.json` habilitam o modo DEV. Essa alternativa não instala nem distribui essas credenciais para os operadores. Enquanto não houver publicador ativo/autorizado, o relatório permanece **Envio pendente**, com Excel disponível pelo cache compartilhado.
+O perfil operacional também pode ser indicado por `MINIO_CREDENTIALS_FILE` ou pelos arquivos privados `minio.credentials.json` e `credentials.json` na pasta BACKEND. O acesso a relatórios funciona independentemente de `CONFIG.dev`. As credenciais devem ser provisionadas nos publicadores autorizados. Enquanto não houver publicador ativo, o relatório permanece **Envio pendente**, com Excel disponível pelo cache compartilhado.
 
 ## Tela e API
 

@@ -38,6 +38,7 @@ from app.services.scheduler import ScheduleEngine
 from app.services.session_audit import SessionAudit
 from app.services.chat import ChatService
 from app.services.chat_archive import ChatArchive
+from app.services.chat_remote import RemoteChat
 from app.services.device_identity import device_identity
 from app.services.preview_persona import finance_identity, restrict_finance_preview
 from app.services.step_repository import StepRepository
@@ -96,6 +97,7 @@ def create_app() -> FastAPI:
     app.state.env_catalog = EnvCatalog(settings)
     app.state.legacy_config = LegacyConfig(settings)
     app.state.chat = ChatService(settings, app.state.legacy_config)
+    app.state.chat_remote = RemoteChat(settings.backend_root, app.state.legacy_config)
     app.state.chat_archive = ChatArchive(app.state.chat, store)
     app.state.tariffs = TariffService(app.state.legacy_config)
     app.state.crystal_reports = CrystalReportService(settings, app.state.legacy_config)
@@ -164,6 +166,7 @@ def create_app() -> FastAPI:
 
     @app.on_event("shutdown")
     async def shutdown_resources() -> None:
+        await asyncio.to_thread(app.state.chat_remote.close)
         await app.state.chat_archive.close()
         if app.state.diagnostic_agent:
             await app.state.diagnostic_agent.close()

@@ -59,3 +59,7 @@ BACKEND/ocr_sanity.png
 BACKEND/credentials.json
 BACKEND/CONFIG.dev
 **/communication.private.json
+**/minio.credentials.json
+**/chat-server.private.json
+**/chat-clients.private.json
+deploy/chat/secrets/

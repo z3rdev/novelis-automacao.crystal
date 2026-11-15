@@ -4,13 +4,13 @@ import json
 from datetime import UTC, datetime, timedelta
 from fnmatch import fnmatchcase
 from hashlib import sha256
-from pathlib import Path
 from urllib.parse import unquote, urlsplit
 from uuid import uuid4
 
 import httpx
 
-from app.services.releases.config import BUCKET, ENDPOINT, DeveloperConfig, s3_client
+from app.services.minio_config import operational_client
+from app.services.releases.config import BUCKET, ENDPOINT
 
 PREFIX = "cargo-hub/reports/executions/"
 DAILY_PREFIX = "cargo-hub/reports/daily/"
@@ -26,11 +26,7 @@ class ReportStorage:
         self.root, self.config = backend_root, config
 
     def client(self):
-        if path := self.config.get("EXECUTION_REPORT_S3_CREDENTIALS_FILE"):
-            path = Path(path)
-            return s3_client(path if path.is_absolute() else self.root / path)
-        developer = DeveloperConfig(self.root)
-        return developer.client() if developer.enabled() else None
+        return operational_client(self.root, self.config, "EXECUTION_REPORT_S3_CREDENTIALS_FILE")
 
     @staticmethod
     def ensure_private(client, key):

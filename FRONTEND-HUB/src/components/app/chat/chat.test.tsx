@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { ChatPage } from "./chat-page";
@@ -92,7 +92,16 @@ beforeEach(() => {
   ]);
   fixture.api.getChatRoom.mockResolvedValue(detail);
   fixture.api.readChatRoom.mockResolvedValue(undefined);
-  fixture.api.sendChatMessage.mockResolvedValue({ id: "sent" });
+  fixture.api.sendChatMessage.mockImplementation(async (_room, body, client_id) => ({
+    ...detail.messages[0],
+    id: "sent",
+    seq: 2,
+    sender: "financial",
+    sender_name: "Financeiro",
+    kind: "text",
+    body,
+    client_id,
+  }));
   fixture.api.createChatRoom.mockResolvedValue({ id: "room-1" });
   fixture.api.requestGnre.mockResolvedValue({ id: "request-1" });
   fixture.api.uploadGnre.mockResolvedValue(detail);
@@ -146,6 +155,7 @@ it("abre uma solicitação para o Financeiro com o CT-e preenchido", async () =>
     cte: "10-10-2789",
     note: "",
     chamado: "",
+    client_id: expect.any(String),
   });
 });
 
@@ -183,6 +193,7 @@ it("lista os pendentes que exigem documentos e solicita no mesmo chat pelo botã
       cte: "11-10-433",
       note: "",
       chamado: "",
+      client_id: expect.any(String),
     }),
   );
   expect(fixture.api.createChatRoom).not.toHaveBeenCalled();
@@ -246,4 +257,141 @@ it("não marca mensagens como lidas com a janela oculta", async () => {
   show();
   await screen.findByRole("article", { name: "Documentos do CT-e 10-10-2789" });
   expect(fixture.api.readChatRoom).not.toHaveBeenCalled();
+});
+
+it("mostra o card reenviado com os documentos já registrados", async () => {
+  fixture.api.getChatRoom.mockResolvedValue({
+    ...detail,
+    messages: [
+      ...detail.messages,
+      { ...detail.messages[0], id: "attachment", seq: 2, kind: "attachment", body: "Guia enviada" },
+      { ...detail.messages[0], id: "resent", seq: 3 },
+    ],
+    requests: [
+      {
+        ...request,
+        state: "partial",
+        guia: {
+          id: "saved-guide",
+          kind: "guia",
+          sha256: "fixture",
+          uploaded_name: "Financeiro",
+          uploaded_at: "2026-11-15T12:05:00Z",
+        },
+      },
+    ],
+  });
+  show();
+  const cards = await screen.findAllByRole("article", { name: "Documentos do CT-e 10-10-2789" });
+  expect(cards).toHaveLength(2);
+  for (const card of cards) {
+    expect(within(card).getByText("Documentação parcial")).toBeVisible();
+    expect(within(card).getByRole("button", { name: "Baixar Guia GNRE" })).toBeVisible();
+    expect(within(card).getByText("Aguardando envio")).toBeVisible();
+  }
+});
+
+it("repete a tentativa com o mesmo identificador e cria outro para um novo envio", async () => {
+  const close = vi.fn();
+  fixture.api.requestGnre.mockRejectedValueOnce(new Error("Conexão interrompida"));
+  show(
+    <ChatDialog
+      open
+      close={close}
+      directory={directory}
+      gnre
+      initialCte="10-10-2789"
+      selectedRoom="room-1"
+      onCreated={vi.fn()}
+    />,
+  );
+  const send = screen.getByRole("button", { name: "Enviar solicitação" });
+  fireEvent.click(send);
+  await waitFor(() => expect(fixture.api.requestGnre).toHaveBeenCalledTimes(1));
+  await waitFor(() => expect(send).not.toBeDisabled());
+  fireEvent.click(send);
+  await waitFor(() => expect(close).toHaveBeenCalledTimes(1));
+  expect(fixture.api.requestGnre.mock.calls[1]?.[1].client_id).toBe(
+    fixture.api.requestGnre.mock.calls[0]?.[1].client_id,
+  );
+  fireEvent.click(send);
+  await waitFor(() => expect(close).toHaveBeenCalledTimes(2));
+  expect(fixture.api.requestGnre.mock.calls[2]?.[1].client_id).not.toBe(
+    fixture.api.requestGnre.mock.calls[0]?.[1].client_id,
+  );
+});
+
+it("mostra a mensagem como enviando enquanto a confirmação está pendente", async () => {
+  let confirm!: (message: unknown) => void;
+  fixture.api.sendChatMessage.mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        confirm = resolve;
+      }),
+  );
+  show();
+  await screen.findByRole("article", { name: "Documentos do CT-e 10-10-2789" });
+  fireEvent.change(screen.getByRole("textbox", { name: "Mensagem da conversa" }), {
+    target: { value: "Já estou providenciando" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Enviar mensagem" }));
+  expect(await screen.findByText("Enviando…")).toBeVisible();
+  expect(within(screen.getByRole("log")).getByText("Já estou providenciando")).toBeVisible();
+  const clientId = fixture.api.sendChatMessage.mock.calls[0]?.[2];
+  confirm({
+    ...detail.messages[0],
+    id: "confirmed",
+    seq: 2,
+    kind: "text",
+    sender: "financial",
+    sender_name: "Financeiro",
+    body: "Já estou providenciando",
+    client_id: clientId,
+  });
+  await waitFor(() => expect(screen.queryByText("Enviando…")).toBeNull());
+  expect(screen.getAllByText("Já estou providenciando")).toHaveLength(1);
+});
+
+it("mantém a confirmação WebSocket quando a resposta HTTP falha depois da gravação", async () => {
+  let fail!: (error: Error) => void;
+  fixture.api.sendChatMessage.mockImplementation(
+    () =>
+      new Promise((_resolve, reject) => {
+        fail = reject;
+      }),
+  );
+  show();
+  await screen.findByRole("article", { name: "Documentos do CT-e 10-10-2789" });
+  fireEvent.change(screen.getByRole("textbox", { name: "Mensagem da conversa" }), {
+    target: { value: "Confirmada" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Enviar mensagem" }));
+  await screen.findByText("Enviando…");
+  const clientId = fixture.api.sendChatMessage.mock.calls[0]?.[2];
+  act(() =>
+    clients.at(-1)!.setQueryData(["chat-room", "local", "fixture", "room-1", 0], {
+      ...detail,
+      messages: [
+        ...detail.messages,
+        {
+          ...detail.messages[0],
+          id: "received",
+          seq: 2,
+          sender: "financial",
+          kind: "text",
+          body: "Confirmada",
+          client_id: clientId,
+        },
+      ],
+    }),
+  );
+  fail(new Error("Resposta interrompida"));
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Enviar mensagem" })).toBeDisabled(),
+  );
+  await waitFor(() =>
+    expect(screen.getByRole("textbox", { name: "Mensagem da conversa" })).toHaveValue(""),
+  );
+  expect(screen.queryByText("Falha no envio. Tente novamente.")).toBeNull();
+  expect(within(screen.getByRole("log")).getByText("Confirmada")).toBeVisible();
 });

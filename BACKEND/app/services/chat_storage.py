@@ -2,13 +2,13 @@
 
 from base64 import b64encode
 from hashlib import md5, sha256
-from pathlib import Path
 from uuid import UUID
 
 from app.domain.chat import ChatStorageError, cte_code
 from app.services.chat_files import MAX_UPLOAD
 from app.services.execution_reports.storage import ReportStorage
-from app.services.releases.config import BUCKET, s3_client
+from app.services.minio_config import operational_client
+from app.services.releases.config import BUCKET
 
 PREFIX = "cargo-hub/gnre/"
 PENDING = PREFIX + "pending/"
@@ -28,12 +28,7 @@ class ChatObjectStorage:
 
     def client(self):
         if self._client is None:
-            path = self.config.get("GNRE_S3_CREDENTIALS_FILE")
-            if path:
-                path = Path(path)
-                self._client = s3_client(path if path.is_absolute() else self.root / path)
-            else:
-                self._client = ReportStorage(self.root, self.config).client()
+            self._client = operational_client(self.root, self.config, "GNRE_S3_CREDENTIALS_FILE")
         if self._client is None:
             raise ChatStorageError(
                 "O armazenamento de GNRE no MinIO não está configurado neste computador."

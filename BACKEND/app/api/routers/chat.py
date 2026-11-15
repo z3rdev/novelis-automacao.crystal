@@ -1,10 +1,10 @@
 import asyncio
-from typing import Literal
+from typing import Annotated, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 
-from app.api.deps import require_operator_session
+from app.api.operator_session import require_operator_session
 from app.domain.chat import (
     ChatError,
     ChatMessageInput,
@@ -16,9 +16,13 @@ from app.infrastructure.chamados_postgres import CommunicationUnavailable
 from app.services.chat_files import MAX_UPLOAD
 
 router = APIRouter(prefix="/hub/chat", tags=["internal-messages"])
+OperatorActor = Annotated[dict, Depends(require_operator_session)]
 
 
 def service(request):
+    remote = getattr(request.app.state, "chat_remote", None)
+    if remote and remote.profile():
+        return remote
     return request.app.state.chat
 
 
@@ -34,50 +38,65 @@ async def call(function, *args):
 
 
 @router.get("")
-async def inbox(request: Request):
-    actor = await require_operator_session(request)
+async def inbox(request: Request, actor: OperatorActor):
     return await call(service(request).inbox, actor)
 
 
 @router.get("/directory")
-async def directory(request: Request):
-    actor = await require_operator_session(request)
+async def directory(request: Request, actor: OperatorActor):
     return await call(service(request).directory, actor)
 
 
 @router.post("/rooms", status_code=201)
-async def create_room(body: ConversationInput, request: Request):
-    actor = await require_operator_session(request)
+async def create_room(body: ConversationInput, request: Request, actor: OperatorActor):
     return await call(service(request).create_room, actor, body)
 
 
 @router.get("/rooms/{room}")
-async def room_detail(room: UUID, request: Request, before: int | None = Query(None, ge=1)):
-    actor = await require_operator_session(request)
+async def room_detail(
+    room: UUID,
+    request: Request,
+    actor: OperatorActor,
+    before: int | None = Query(None, ge=1),
+):
     return await call(service(request).detail, actor, room, before)
 
 
 @router.post("/rooms/{room}/messages", status_code=201)
-async def send_message(room: UUID, body: ChatMessageInput, request: Request):
-    actor = await require_operator_session(request)
-    return await call(service(request).send, actor, room, body)
+async def send_message(
+    room: UUID,
+    body: ChatMessageInput,
+    request: Request,
+    actor: OperatorActor,
+):
+    message = await call(service(request).send, actor, room, body)
+    if realtime := getattr(request.app.state, "chat_realtime", None):
+        realtime.changed(room, message)
+    return message
 
 
 @router.post("/rooms/{room}/read", status_code=204)
-async def mark_read(room: UUID, body: ChatReadInput, request: Request):
-    actor = await require_operator_session(request)
+async def mark_read(
+    room: UUID,
+    body: ChatReadInput,
+    request: Request,
+    actor: OperatorActor,
+):
     await call(service(request).read, actor, room, body.through)
 
 
 @router.post("/rooms/{room}/requests", status_code=201)
-async def create_request(room: UUID, body: GnreRequestInput, request: Request):
-    actor = await require_operator_session(request)
+async def create_request(
+    room: UUID,
+    body: GnreRequestInput,
+    request: Request,
+    actor: OperatorActor,
+):
     return await call(service(request).request, actor, room, body)
 
 
 @router.post("/rooms/{room}/requests/{identifier}/claim", status_code=204)
-async def claim_request(room: UUID, identifier: UUID, request: Request):
-    actor = await require_operator_session(request)
+async def claim_request(room: UUID, identifier: UUID, request: Request, actor: OperatorActor):
     await call(service(request).claim, actor, room, identifier)
 
 
@@ -88,9 +107,9 @@ async def upload_document(
     kind: Literal["guia", "comprovante"],
     request: Request,
     client_id: UUID,
+    actor: OperatorActor,
     filename: str = Query(min_length=1, max_length=240),
 ):
-    actor = await require_operator_session(request)
     data = bytearray()
     async for chunk in request.stream():
         if len(data) + len(chunk) > MAX_UPLOAD:
@@ -103,9 +122,12 @@ async def upload_document(
 
 @router.get("/rooms/{room}/requests/{identifier}/files/{kind}")
 async def download_document(
-    room: UUID, identifier: UUID, kind: Literal["guia", "comprovante", "combined"], request: Request
+    room: UUID,
+    identifier: UUID,
+    kind: Literal["guia", "comprovante", "combined"],
+    request: Request,
+    actor: OperatorActor,
 ):
-    actor = await require_operator_session(request)
     data, filename = await call(service(request).download, actor, room, identifier, kind)
     return Response(
         data,

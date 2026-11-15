@@ -11,7 +11,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useApi } from "@/services";
-import type { ChatRoom } from "@/services/chat";
+import type { ChatActor, ChatDetail, ChatRoom } from "@/services/chat";
+import { mergeChatSnapshot, mergeChatMessage } from "@/services/chat-cache";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -53,7 +54,7 @@ export function ChatPage({
       .includes(search.toLocaleLowerCase("pt-BR")),
   );
   return (
-    <PageBody className="chat-page">
+    <PageBody className="chat-page space-y-0">
       <div className="chat-page-heading">
         <h2>Mensagens</h2>
         <div>
@@ -139,7 +140,7 @@ export function ChatPage({
           <Conversation
             key={room.id}
             room={room}
-            actor={inbox.data.actor.key}
+            actor={inbox.data.actor}
             onRequest={() => {
               setRequestInRoom(true);
               setDialog("gnre");
@@ -173,7 +174,7 @@ function Conversation({
   onRequest,
 }: {
   room: ChatRoom;
-  actor: string;
+  actor: ChatActor;
   onRequest(): void;
 }) {
   const { api, mode, baseUrl } = useApi();
@@ -182,27 +183,86 @@ function Conversation({
   const [text, setText] = useState("");
   const attempt = useRef<{ text: string; id: string } | null>(null);
   const scroll = useRef<HTMLDivElement>(null);
+  const latestKey = ["chat-room", mode, baseUrl, room.id, 0];
   const detail = useQuery({
     queryKey: ["chat-room", mode, baseUrl, room.id, before ?? 0],
-    queryFn: () => api.getChatRoom(room.id, before),
+    queryFn: async () => {
+      const snapshot = await api.getChatRoom(room.id, before);
+      const cached = qc.getQueryData<ChatDetail>([
+        "chat-room",
+        mode,
+        baseUrl,
+        room.id,
+        before ?? 0,
+      ]);
+      return mergeChatSnapshot(snapshot, cached);
+    },
     refetchInterval: before ? false : 3000,
     retry: 0,
   });
-  const latest = detail.data?.messages.at(-1)?.seq ?? 0;
+  const latest = detail.data?.messages.filter((message) => !message.delivery).at(-1)?.seq ?? 0;
   const send = useMutation({
+    onMutate: async (body: string) => {
+      await qc.cancelQueries({ queryKey: latestKey });
+      if (!attempt.current || attempt.current.text !== body)
+        attempt.current = { text: body, id: crypto.randomUUID() };
+      const clientId = attempt.current.id;
+      setBefore(undefined);
+      qc.setQueryData<ChatDetail>(latestKey, (current) => {
+        const value = current ?? { messages: [], requests: [], before: null };
+        return mergeChatMessage(value, {
+          id: `pending:${clientId}`,
+          client_id: clientId,
+          seq: (value.messages.at(-1)?.seq ?? 0) + 1,
+          sender: actor.key,
+          sender_name: actor.name,
+          body,
+          kind: "text",
+          request_id: null,
+          created_at: new Date().toISOString(),
+          delivery: "sending",
+        });
+      });
+      return clientId;
+    },
     mutationFn: (body: string) => {
       if (!attempt.current || attempt.current.text !== body)
         attempt.current = { text: body, id: crypto.randomUUID() };
       return api.sendChatMessage(room.id, body, attempt.current.id);
     },
-    onSuccess: (_, body) => {
+    onSuccess: (message, body) => {
+      qc.setQueryData<ChatDetail>(latestKey, (current) =>
+        current ? mergeChatMessage(current, message) : current,
+      );
       setText((value) => (value.trim() === body ? "" : value));
       attempt.current = null;
       setBefore(undefined);
       void qc.invalidateQueries({ queryKey: ["chat-room", mode, baseUrl, room.id] });
       void qc.invalidateQueries({ queryKey: ["chat-inbox"] });
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error, body, clientId) => {
+      const confirmed = qc
+        .getQueryData<ChatDetail>(latestKey)
+        ?.messages.find((message) => message.client_id === clientId && !message.delivery);
+      if (confirmed) {
+        setText((value) => (value.trim() === body ? "" : value));
+        attempt.current = null;
+        return;
+      }
+      qc.setQueryData<ChatDetail>(
+        latestKey,
+        (current) =>
+          current && {
+            ...current,
+            messages: current.messages.map((message) =>
+              message.delivery && message.client_id === clientId
+                ? { ...message, delivery: "failed" }
+                : message,
+            ),
+          },
+      );
+      toast.error(error.message);
+    },
   });
   useEffect(() => {
     const read = () => {
@@ -223,7 +283,7 @@ function Conversation({
   }, [api, latest, room.id, before, qc, mode, baseUrl]);
   useEffect(() => {
     if (!before) scroll.current?.scrollTo({ top: scroll.current.scrollHeight, behavior: "smooth" });
-  }, [latest, before]);
+  }, [latest, before, detail.data?.messages.length]);
   const displayedRequests = new Set<string>();
   return (
     <section className="chat-conversation" aria-label={`Conversa com ${room.title}`}>
@@ -274,16 +334,24 @@ function Conversation({
         </div>
         {detail.data?.messages.map((message) => {
           const request = detail.data.requests.find((item) => item.id === message.request_id);
-          const showRequest = request && !displayedRequests.has(request.id);
+          const showRequest =
+            request && (message.kind === "request" || !displayedRequests.has(request.id));
           if (request) displayedRequests.add(request.id);
           return (
-            <div key={message.id} className="chat-message" data-own={message.sender === actor}>
+            <div key={message.id} className="chat-message" data-own={message.sender === actor.key}>
               <div className="chat-message-meta">
                 <strong>{message.sender_name}</strong>
                 <time dateTime={message.created_at}>{fmtDateTime(message.created_at)}</time>
               </div>
               <div className="chat-message-body">
                 {showRequest ? <GnreCard value={request} room={room.id} /> : <p>{message.body}</p>}
+                {message.delivery && (
+                  <small role="status">
+                    {message.delivery === "sending"
+                      ? "Enviando…"
+                      : "Falha no envio. Tente novamente."}
+                  </small>
+                )}
               </div>
             </div>
           );

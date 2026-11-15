@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useApi } from "@/services";
@@ -41,6 +41,7 @@ export function ChatDialog({
   const [cte, setCte] = useState(initialCte);
   const [note, setNote] = useState("");
   const [chamado, setChamado] = useState("");
+  const attempt = useRef<{ key: string; id: string } | null>(null);
   const operators = (directory?.operators ?? []).filter(
     (item) => item.online && item.sector === "FIN",
   );
@@ -49,15 +50,20 @@ export function ChatDialog({
   const save = useMutation({
     mutationFn: async () => {
       const room = selectedRoom ?? (await api.createChatRoom(type, target)).id;
-      if (gnre)
+      if (gnre) {
+        const key = JSON.stringify([room, cte.trim(), note.trim(), chamado.trim()]);
+        if (attempt.current?.key !== key) attempt.current = { key, id: crypto.randomUUID() };
         await api.requestGnre(room, {
           cte: cte.trim(),
           note: note.trim(),
           chamado: chamado.trim(),
+          client_id: attempt.current.id,
         });
+      }
       return room;
     },
     onSuccess: (room) => {
+      attempt.current = null;
       void qc.invalidateQueries({ queryKey: ["chat-inbox"] });
       void qc.invalidateQueries({ queryKey: ["chat-room"] });
       onCreated(room);

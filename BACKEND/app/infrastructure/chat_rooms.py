@@ -45,6 +45,9 @@ class ChatRooms:
             rows = db.execute(
                 f"""SELECT r.*, creator.name AS creator_name, recipient.name AS target_name,
                 preview.body AS last_message, preview.created_at AS last_message_at,
+                (SELECT md5(COALESCE(string_agg(concat(d.generation,d.publish_state,d.archive_state,q.assigned_to),',' ORDER BY q.id),''))
+                  FROM public.cargo_hub_chat_requests q JOIN public.cargo_hub_chat_documents d USING(cte)
+                  WHERE q.room_id=r.id) AS document_revision,
                 (SELECT COALESCE(max(m.seq),0) FROM public.cargo_hub_chat_messages m
                   WHERE m.room_id=r.id AND m.sender<>%s AND m.seq>COALESCE(seen.through,0)) AS unread_seq,
                 (SELECT count(*) FROM public.cargo_hub_chat_messages m
@@ -71,6 +74,7 @@ class ChatRooms:
                 str(existing["room_id"]) != str(room_id)
                 or existing["body"] != body
                 or existing["kind"] != kind
+                or str(existing["request_id"]) != str(request_id)
             ):
                 raise ChatConflict("Esta tentativa já foi usada para outra mensagem.")
             return existing

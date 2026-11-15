@@ -15,7 +15,7 @@ export default defineConfig({
     proxy:
       process.env.NOVELIS_PREVIEW_ROLE === "finance"
         ? {
-            "/api": { target: "http://127.0.0.1:18037", changeOrigin: true },
+            "/api": { target: "http://127.0.0.1:18037", changeOrigin: true, ws: true },
           }
         : undefined,
   },
